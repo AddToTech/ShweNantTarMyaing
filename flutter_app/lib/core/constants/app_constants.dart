@@ -3,8 +3,6 @@
 // Global application constants for SitePyoe
 // ============================================================
 
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppConstants {
@@ -15,20 +13,16 @@ class AppConstants {
   static const String appVersion = '1.4.0';
 
   // ── API ─────────────────────────────────────────────────
-  // Override via environment config / --dart-define at build time:
-  //   flutter run --dart-define=API_BASE_URL=https://api.sitepyoe.com/api/v1
+  /// Permanent Production Cloud Server URL for ShweNantTarMyaing
+  static const String productionApiBaseUrl = 'https://sntm.addtotechmm.com/api/v1';
+
   static const String keyApiBaseUrl = 'sp_custom_api_base_url';
   static String? _resolvedApiBaseUrl;
 
   static String get defaultApiBaseUrl {
     const fromEnv = String.fromEnvironment('API_BASE_URL');
     if (fromEnv.isNotEmpty) return sanitizeApiUrl(fromEnv);
-
-    // Android emulator alias for host machine 127.0.0.1 is 10.0.2.2
-    if (!kIsWeb && Platform.isAndroid) {
-      return 'http://10.0.2.2:5001/api/v1';
-    }
-    return 'http://localhost:5001/api/v1';
+    return productionApiBaseUrl;
   }
 
   static String get apiBaseUrl {
@@ -39,7 +33,7 @@ class AppConstants {
       return _resolvedApiBaseUrl!;
     }
 
-    return defaultApiBaseUrl;
+    return productionApiBaseUrl;
   }
 
   static void setResolvedApiBaseUrl(String url) {

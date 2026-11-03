@@ -64,7 +64,11 @@ class ApiClient {
   }
 
   Uri? _getFallbackUri(Uri original) {
-    if (original.host == '10.0.2.2') {
+    if (original.host == 'sntm.addtotechmm.com') {
+      return original.replace(scheme: 'http', host: '206.189.43.23', port: 80);
+    } else if (original.host == '206.189.43.23') {
+      return original.replace(scheme: 'https', host: 'sntm.addtotechmm.com', port: 443);
+    } else if (original.host == '10.0.2.2') {
       return original.replace(host: 'localhost');
     } else if (original.host == 'localhost' || original.host == '127.0.0.1') {
       return original.replace(host: '10.0.2.2');
