@@ -325,52 +325,8 @@ class _SideNavRail extends ConsumerWidget {
           // Setting Menu (Under login profile icon)
           if (settingsPerm != null) ...[
             buildNavItem(settingsPerm),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
           ],
-
-          // Always-visible Sign Out / Logout button for all roles (including Cashier)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            child: Tooltip(
-              message: 'ထွက်မည် (Sign Out / Switch Account)',
-              child: GestureDetector(
-                onTap: () => _confirmLogout(context, ref),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 7),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.error.withValues(alpha: 0.25),
-                    ),
-                  ),
-                  child: const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.logout_rounded,
-                        color: AppColors.error,
-                        size: 20,
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'ထွက်မည်\nLogout',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.error,
-                          fontSize: 7.5,
-                          height: 1.15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
         ],
       ),
     );
