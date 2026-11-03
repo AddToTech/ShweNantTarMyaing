@@ -1,0 +1,22 @@
+{
+  "name": "sitepyoe-backend",
+  "version": "1.0.0",
+  "description": "SitePyoe Nursery POS & Inventory Management System Backend API",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:migrate": "node db/migrate.js",
+    "db:seed": "node db/migrate.js --seed"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.2.0",
+    "pg": "^8.12.0"
+  }
+}

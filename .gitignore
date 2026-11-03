@@ -1,0 +1,53 @@
+# ============================================================
+# ShweNantTarMyaing (SitePyoe POS) — Root .gitignore
+# ============================================================
+
+# OS / Editor
+.DS_Store
+**/.DS_Store
+.idea/
+.vscode/
+*.iml
+*.swp
+*.log
+
+# ── Secrets (NEVER commit) ─────────────────────────────────
+.env
+**/.env
+.env.local
+.env.*.local
+**/key.properties
+**/*.jks
+**/*.keystore
+**/local.properties
+
+# ── Backend (Node.js) ──────────────────────────────────────
+backend/node_modules/
+node_modules/
+npm-debug.log*
+
+# Uploaded product images (runtime data — persist via volume on server)
+uploads/*
+!uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# ── Flutter ────────────────────────────────────────────────
+flutter_app/build/
+flutter_app/.dart_tool/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+flutter_app/.pub-cache/
+flutter_app/.pub/
+flutter_app/coverage/
+flutter_app/android/.gradle/
+flutter_app/android/app/debug/
+flutter_app/android/app/profile/
+flutter_app/android/app/release/
+
+# ── Large binary artifacts ─────────────────────────────────
+*.apk
+*.aab
+*.zip
+downloads/
+user_manual_deploy/downloads/

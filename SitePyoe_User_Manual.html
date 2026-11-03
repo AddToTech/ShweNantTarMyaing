@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>စိုက်ပျိုး (SitePyoe) POS - User Manual & Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Myanmar:wght@400;500;600;700&family=Padauk:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #15803d;
+      --primary-dark: #14532d;
+      --primary-light: #22c55e;
+      --primary-soft: #f0fdf4;
+      --accent: #ca8a04;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Noto Sans Myanmar', 'Pyidaungsu', 'Myanmar MN', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 15px;
+      line-height: 1.85;
+      color: var(--text-main);
+      background-color: var(--bg-page);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Navigation Bar */
+    .top-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-sm);
+    }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #15803d, #22c55e);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 22px;
+      box-shadow: 0 4px 10px rgba(34, 197, 94, 0.3);
+    }
+    .brand-title {
+      font-weight: 800;
+      font-size: 19px;
+      color: var(--primary-dark);
+      letter-spacing: -0.02em;
+    }
+    .brand-badge {
+      font-size: 11px;
+      background: #dcfce7;
+      color: #166534;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+    .btn-outline {
+      background: white;
+      border-color: var(--border-color);
+      color: var(--text-main);
+    }
+    .btn-outline:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    /* Layout */
+    .app-layout {
+      display: flex;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px 32px 64px 32px;
+      gap: 36px;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar-toc {
+      width: 290px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 80px;
+      height: calc(100vh - 100px);
+      overflow-y: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    .sidebar-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      padding-left: 8px;
+    }
+    .toc-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .toc-item {
+      margin-bottom: 4px;
+    }
+    .toc-link {
+      display: block;
+      padding: 8px 12px;
+      color: #334155;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      line-height: 1.4;
+    }
+    .toc-link:hover {
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+    }
+
+    /* Main Content Area */
+    .main-content {
+      flex: 1;
+      min-width: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 40px 48px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Hero Banner */
+    .hero-banner {
+      background: linear-gradient(135deg, #14532d 0%, #166534 50%, #15803d 100%);
+      color: white;
+      padding: 36px 40px;
+      border-radius: var(--radius);
+      margin-bottom: 36px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-banner::after {
+      content: '🌿';
+      position: absolute;
+      right: 20px;
+      bottom: -15px;
+      font-size: 130px;
+      opacity: 0.12;
+      pointer-events: none;
+    }
+    .hero-banner h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: white !important;
+      border: none !important;
+      padding: 0 !important;
+    }
+    .hero-subtitle {
+      font-size: 16px;
+      color: #bbf7d0;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    .hero-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .hero-pill {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      color: #f0fdf4;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4 {
+      font-family: inherit;
+      color: var(--primary-dark);
+      font-weight: 700;
+      line-height: 1.4;
+    }
+    h1 {
+      font-size: 22px;
+      border-bottom: 2px solid #bbf7d0;
+      padding-bottom: 10px;
+      margin-top: 48px;
+      margin-bottom: 20px;
+    }
+    h2 {
+      font-size: 18px;
+      border-left: 4px solid var(--primary);
+      padding-left: 12px;
+      margin-top: 36px;
+      margin-bottom: 16px;
+    }
+    h3 {
+      font-size: 16px;
+      color: #166534;
+      margin-top: 24px;
+      margin-bottom: 12px;
+    }
+    p {
+      margin-bottom: 16px;
+      color: #334155;
+    }
+    ul, ol {
+      margin-bottom: 20px;
+      padding-left: 24px;
+      color: #334155;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    strong {
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    /* Screenshot Card Styling */
+    .screenshot-card {
+      margin: 28px 0 36px 0;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .screenshot-card:hover {
+      box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.12);
+    }
+    .screenshot-header {
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot.red { background: #ef4444; }
+    .dot.yellow { background: #f59e0b; }
+    .dot.green { background: #10b981; }
+    .screenshot-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #64748b;
+      margin-left: 6px;
+    }
+    .screenshot-wrapper {
+      position: relative;
+      cursor: zoom-in;
+      background: #0f172a;
+      text-align: center;
+      padding: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .screenshot-wrapper img {
+      max-width: 100%;
+      height: auto;
+      max-height: 600px;
+      display: block;
+      margin: 0 auto;
+      border-radius: 6px;
+      transition: opacity 0.2s ease;
+    }
+    .screenshot-wrapper:hover img {
+      opacity: 0.92;
+    }
+    .zoom-overlay {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      background: rgba(15, 23, 42, 0.85);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+      box-shadow: var(--shadow-md);
+    }
+    .screenshot-caption {
+      padding: 10px 16px;
+      background: #ffffff;
+      font-size: 12.5px;
+      color: #64748b;
+      text-align: center;
+      font-weight: 500;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    /* Callouts */
+    .callout {
+      display: flex;
+      gap: 14px;
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+      border: 1px solid transparent;
+    }
+    .callout-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+      line-height: 1.2;
+    }
+    .callout-content {
+      flex: 1;
+    }
+    .callout-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .callout-body {
+      font-size: 13.5px;
+      color: #334155;
+      line-height: 1.7;
+    }
+    .callout.tip {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+    .callout.tip .callout-title { color: #166534; }
+    .callout.note {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+    .callout.note .callout-title { color: #1e40af; }
+    .callout.important {
+      background: #fffbeb;
+      border-color: #fde68a;
+    }
+    .callout.important .callout-title { color: #92400e; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 13.5px;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+    th {
+      background: #f8fafc;
+      color: var(--primary-dark);
+      font-weight: 700;
+      font-size: 13px;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    tr:hover td {
+      background: #f8fafc;
+    }
+
+    /* Code */
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      background: #f1f5f9;
+      color: #0f766e;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+
+    /* Lightbox Modal */
+    .lightbox-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      padding: 24px;
+    }
+    .lightbox-modal.active {
+      display: flex;
+    }
+    .lightbox-content {
+      max-width: 95vw;
+      max-height: 85vh;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    .lightbox-title {
+      color: white;
+      font-size: 15px;
+      margin-top: 14px;
+      font-weight: 600;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      color: white;
+      font-size: 32px;
+      cursor: pointer;
+      line-height: 1;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      transition: background 0.2s ease;
+    }
+    .lightbox-close:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Footer */
+    .page-footer {
+      margin-top: 50px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .app-layout {
+        flex-direction: column;
+        padding: 16px;
+      }
+      .sidebar-toc {
+        width: 100%;
+        position: relative;
+        top: 0;
+        height: auto;
+        max-height: 280px;
+      }
+      .main-content {
+        padding: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="top-header">
+    <a href="#" class="brand-logo">
+      <div class="brand-icon">🌱</div>
+      <div>
+        <span class="brand-title">SitePyoe Nursery POS</span>
+        <span class="brand-badge">Client Review</span>
+      </div>
+    </a>
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="window.print()">🖨️ ပရင့်ထုတ်မည်</button>
+      <a href="./downloads/app-release.apk" download="SitePyoe-Release.apk" class="btn btn-primary">📱 Download APK</a>
+    </div>
+  </header>
+
+  <!-- App Layout -->
+  <div class="app-layout">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar-toc">
+      <div class="sidebar-title">မာတိကာ (Table of Contents)</div>
+      <ul class="toc-list">
+        <li class="toc-item"><a class="toc-link" href="#၁-စနစ်မိတ်ဆက်-introduction">၁. စနစ်မိတ်ဆက်</a></li>
+        <li class="toc-item"><a class="toc-link" href="#၂-စနစ်သို့-စတင်ဝင်ရောက်ခြင်း-login--demo-accounts">၂. စနစ်သို့ ဝင်ရောက်ခြင်း</a></li>
+        <li class="toc-item"><a class="toc-link" href="#၃-အရောင်းကောင်တာ-pos-terminal">၃. အရောင်းကောင်တာ (POS)</a></li>
+        <li class="toc-item"><a class="toc-link" href="#၄-ငွေပေးချေမှုနှင့်-ဘောက်ချာထုတ်ယူခြင်း-checkout--thermal-printing">၄. ငွေပေးချေမှုနှင့် ပရင့်ထုတ်ခြင်း</a></li>
+        <li class="toc-item"><a class="toc-link" href="#၅-အရောင်းဘောက်ချာမှတ်တမ်းများ-order-history--reprint">၅. ဘောက်ချာမှတ်တမ်းများ</a></li>
+        <li class="toc-item"><a class="toc-link" href="#၆-ကုန်ပစ္စည်းစာရင်းနှင့်-စတော့စီမံခန့်ခွဲမှု-inventory-management">၆. ကုန်ပစ္စည်းနှင့် စတော့စာရင်း</a></li>
+        <li class="toc-item"><a class="toc-link" href="#၇-ဆိုင်ခွဲအချင်းချင်း-ပစ္စည်းလွှဲပြောင်းမှု-branch-transfers">၇. ဆိုင်ခွဲပစ္စည်းလွှဲပြောင်းမှု</a></li>
+        <li class="toc-item"><a class="toc-link" href="#၈-အပင်သေဆုံးမှုနှင့်-ပျက်စီးလေလွင့်မှု-မှတ်တမ်း-wastage--mortality-tracking">၈. အပင်သေဆုံးပျက်စီးမှုစာရင်း</a></li>
+        <li class="toc-item"><a class="toc-link" href="#၉-လုပ်ငန်းသုံး-အစီရင်ခံစာနှင့်-ဘဏ္ဍာရေးစာရင်းများ-reports--analytics">၉. လုပ်ငန်းသုံး အစီရင်ခံစာများ</a></li>
+        <li class="toc-item"><a class="toc-link" href="#၁၀-စနစ်ဆက်တင်များနှင့်-ဝန်ထမ်းလုပ်ပိုင်ခွင့်များ-system-settings--permissions">၁၀. ဆက်တင်နှင့် လုပ်ပိုင်ခွင့်များ</a></li>
+        <li class="toc-item"><a class="toc-link" href="#၁၁-စနစ်မှ-ထွက်ခွာခြင်း-logout">၁၁. စနစ်မှ ထွက်ခွာခြင်း</a></li>
+        <li class="toc-item"><a class="toc-link" href="#၁၂-ဖောက်သည်များအတွက်-စမ်းသပ်အသုံးပြုရန်-လမ်းညွှန်ချက်-client-testing--offline-demo">၁၂. Demo စမ်းသပ်မှုလမ်းညွှန်</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      
+      <!-- Hero Banner -->
+      <div class="hero-banner">
+        <h1>🌱 စိုက်ပျိုး (SitePyoe) POS စနစ်</h1>
+        <div class="hero-subtitle">Nursery & Garden Center အရောင်းဆိုင်နှင့် စတော့ထိန်းသိမ်းရေး ERP အသုံးပြုသူလက်စွဲစာအုပ်</div>
+        <div class="hero-pills">
+          <span class="hero-pill">📌 ဗားရှင်း: 1.3.0 (Official Release)</span>
+          <span class="hero-pill">🗓️ ထုတ်လုပ်သည့်ရက်စွဲ: အောက်တိုဘာ ၂၀၂၆</span>
+          <span class="hero-pill">💻 ပလက်ဖောင်း: Android Tablet / POS Terminal</span>
+          <span class="hero-pill">🔑 ပုံသေ PIN: 1234</span>
+        </div>
+      </div>
+
+      <!-- Rendered Body -->
+      <h1>စိုက်ပျိုး (SitePyoe) အပင်အရောင်းဆိုင် POS စနစ် - အသုံးပြုသူလက်စွဲစာအုပ် (User Manual)</h1>
+<blockquote>
+<p><strong>ဗားရှင်း:</strong> 1.3.0 (Official Release)<br><strong>စနစ်အမျိုးအစား:</strong> Nursery &amp; Garden Center Point-of-Sale (POS) &amp; Inventory ERP<br><strong>ထုတ်လုပ်သည့်ရက်စွဲ:</strong> အောက်တိုဘာ ၂၀၂၆  </p>
+</blockquote>
+<hr>
+<h2>မာတိကာ (Table of Contents)</h2>
+<ol>
+<li><a href="#%E1%81%81-%E1%80%85%E1%80%94%E1%80%85%E1%80%BA%E1%80%99%E1%80%AD%E1%80%90%E1%80%BA%E1%80%86%E1%80%80%E1%80%BA-introduction">စနစ်မိတ်ဆက် (Introduction)</a></li>
+<li><a href="#%E1%81%82-%E1%80%85%E1%80%94%E1%80%85%E1%80%BA%E1%80%9E%E1%80%AD%E1%80%AF%E1%80%B7-%E1%80%85%E1%80%90%E1%80%84%E1%80%BA%E1%80%9D%E1%80%84%E1%80%BA%E1%80%9B%E1%80%B1%E1%80%AC%E1%80%80%E1%80%BA%E1%80%81%E1%80%BC%E1%80%84%E1%80%BA%E1%80%B8-login--demo-accounts">စနစ်သို့ စတင်ဝင်ရောက်ခြင်း (Login &amp; Demo Accounts)</a></li>
+<li><a href="#%E1%81%83-%E1%80%A1%E1%80%9B%E1%80%B1%E1%80%AC%E1%80%84%E1%80%BA%E1%80%B8%E1%80%80%E1%80%B1%E1%80%AC%E1%80%84%E1%80%BA%E1%80%90%E1%80%AC-pos-terminal">အရောင်းကောင်တာ (POS Terminal)</a></li>
+<li><a href="#%E1%81%84-%E1%80%84%E1%80%BD%E1%80%B1%E1%80%95%E1%80%B1%E1%80%B8%E1%80%81%E1%80%BB%E1%80%B1%E1%80%99%E1%80%BE%E1%80%AF%E1%80%94%E1%80%BE%E1%80%84%E1%80%B7%E1%80%BA-%E1%80%98%E1%80%B1%E1%80%AC%E1%80%80%E1%80%BA%E1%80%81%E1%80%BB%E1%80%AC%E1%80%91%E1%80%AF%E1%80%90%E1%80%BA%E1%80%9A%E1%80%B0%E1%80%81%E1%80%BC%E1%80%84%E1%80%BA%E1%80%B8-checkout--thermal-printing">ငွေပေးချေမှုနှင့် ဘောက်ချာထုတ်ယူခြင်း (Checkout &amp; Thermal Printing)</a></li>
+<li><a href="#%E1%81%85-%E1%80%A1%E1%80%9B%E1%80%B1%E1%80%AC%E1%80%84%E1%80%BA%E1%80%B8%E1%80%98%E1%80%B1%E1%80%AC%E1%80%80%E1%80%BA%E1%80%81%E1%80%BB%E1%80%AC%E1%80%99%E1%80%BE%E1%80%90%E1%80%BA%E1%80%90%E1%80%99%E1%80%BA%E1%80%B8%E1%80%99%E1%80%BB%E1%80%AC%E1%80%B8-order-history--reprint">အရောင်းဘောက်ချာမှတ်တမ်းများ (Order History &amp; Reprint)</a></li>
+<li><a href="#%E1%81%86-%E1%80%80%E1%80%AF%E1%80%94%E1%80%BA%E1%80%95%E1%80%85%E1%80%B9%E1%80%85%E1%80%8A%E1%80%BA%E1%80%B8%E1%80%85%E1%80%AC%E1%80%9B%E1%80%84%E1%80%BA%E1%80%B8%E1%80%94%E1%80%BE%E1%80%84%E1%80%B7%E1%80%BA-%E1%80%85%E1%80%90%E1%80%B1%E1%80%AC%E1%80%B7%E1%80%85%E1%80%AE%E1%80%99%E1%80%B6%E1%80%81%E1%80%94%E1%80%B7%E1%80%BA%E1%80%81%E1%80%BD%E1%80%B2%E1%80%99%E1%80%BE%E1%80%AF-inventory-management">ကုန်ပစ္စည်းစာရင်းနှင့် စတော့စီမံခန့်ခွဲမှု (Inventory Management)</a></li>
+<li><a href="#%E1%81%87-%E1%80%86%E1%80%AD%E1%80%AF%E1%80%84%E1%80%BA%E1%80%81%E1%80%BD%E1%80%B2%E1%80%A1%E1%80%81%E1%80%BB%E1%80%84%E1%80%BA%E1%80%B8%E1%80%81%E1%80%BB%E1%80%84%E1%80%BA%E1%80%B8-%E1%80%95%E1%80%85%E1%80%B9%E1%80%85%E1%80%8A%E1%80%BA%E1%80%B8%E1%80%9C%E1%80%BD%E1%80%BE%E1%80%B2%E1%80%95%E1%80%BC%E1%80%B1%E1%80%AC%E1%80%84%E1%80%BA%E1%80%B8%E1%80%99%E1%80%BE%E1%80%AF-branch-transfers">ဆိုင်ခွဲအချင်းချင်း ပစ္စည်းလွှဲပြောင်းမှု (Branch Transfers)</a></li>
+<li><a href="#%E1%81%88-%E1%80%A1%E1%80%95%E1%80%84%E1%80%BA%E1%80%9E%E1%80%B1%E1%80%86%E1%80%AF%E1%80%B6%E1%80%B8%E1%80%99%E1%80%BE%E1%80%AF%E1%80%94%E1%80%BE%E1%80%84%E1%80%B7%E1%80%BA-%E1%80%95%E1%80%BB%E1%80%80%E1%80%BA%E1%80%85%E1%80%AE%E1%80%B8%E1%80%9C%E1%80%B1%E1%80%9C%E1%80%BD%E1%80%84%E1%80%B7%E1%80%BA%E1%80%99%E1%80%BE%E1%80%AF-%E1%80%99%E1%80%BE%E1%80%90%E1%80%BA%E1%80%90%E1%80%99%E1%80%BA%E1%80%B8-wastage--mortality-tracking">အပင်သေဆုံးမှုနှင့် ပျက်စီးလေလွင့်မှု မှတ်တမ်း (Wastage &amp; Mortality Tracking)</a></li>
+<li><a href="#%E1%81%89-%E1%80%9C%E1%80%AF%E1%80%95%E1%80%BA%E1%80%84%E1%80%94%E1%80%BA%E1%80%B8%E1%80%9E%E1%80%AF%E1%80%B6%E1%80%B8-%E1%80%A1%E1%80%85%E1%80%AE%E1%80%9B%E1%80%84%E1%80%BA%E1%80%81%E1%80%B6%E1%80%85%E1%80%AC%E1%80%94%E1%80%BE%E1%80%84%E1%80%B7%E1%80%BA-%E1%80%98%E1%80%8F%E1%80%B9%E1%80%8D%E1%80%AC%E1%80%9B%E1%80%B1%E1%80%B8%E1%80%85%E1%80%AC%E1%80%9B%E1%80%84%E1%80%BA%E1%80%B8%E1%80%99%E1%80%BB%E1%80%AC%E1%80%B8-reports--analytics">လုပ်ငန်းသုံး အစီရင်ခံစာနှင့် ဘဏ္ဍာရေးစာရင်းများ (Reports &amp; Analytics)</a><ul>
+<li><a href="#%E1%81%89%E1%81%81-%E1%80%85%E1%80%AC%E1%80%9B%E1%80%84%E1%80%BA%E1%80%B8%E1%80%81%E1%80%BB%E1%80%AF%E1%80%95%E1%80%BA%E1%80%81%E1%80%BC%E1%80%AF%E1%80%B6%E1%80%84%E1%80%AF%E1%80%B6%E1%80%9E%E1%80%AF%E1%80%B6%E1%80%B8%E1%80%9E%E1%80%95%E1%80%BA%E1%80%81%E1%80%BB%E1%80%80%E1%80%BA-overview">၉.၁ စာရင်းချုပ်ခြုံငုံသုံးသပ်ချက် (Overview)</a></li>
+<li><a href="#%E1%81%89%E1%81%82-%E1%80%A1%E1%80%9B%E1%80%B1%E1%80%AC%E1%80%84%E1%80%BA%E1%80%B8%E1%80%85%E1%80%AC%E1%80%9B%E1%80%84%E1%80%BA%E1%80%B8-sales-transactions">၉.၂ အရောင်းစာရင်း (Sales Transactions)</a></li>
+<li><a href="#၉၃-အဝယ်စာရင်း-purchases-report">၉.၃ အဝယ်စာရင်း (Purchases Report)</a></li>
+<li><a href="#%E1%81%89%E1%81%83-%E1%80%95%E1%80%85%E1%80%B9%E1%80%85%E1%80%8A%E1%80%BA%E1%80%B8%E1%80%A1%E1%80%9C%E1%80%AD%E1%80%AF%E1%80%80%E1%80%BA-%E1%80%A1%E1%80%99%E1%80%BC%E1%80%90%E1%80%BA%E1%80%A1%E1%80%85%E1%80%BD%E1%80%94%E1%80%BA%E1%80%B8-product-wise-sales--profit">၉.၄ ပစ္စည်းအလိုက် အမြတ်အစွန်း (Product-wise Sales &amp; Profit)</a></li>
+<li><a href="#%E1%81%89%E1%81%84-%E1%80%9C%E1%80%80%E1%80%BA%E1%80%80%E1%80%BB%E1%80%94%E1%80%BA%E1%80%85%E1%80%90%E1%80%B1%E1%80%AC%E1%80%B7%E1%80%90%E1%80%94%E1%80%BA%E1%80%96%E1%80%AD%E1%80%AF%E1%80%B8-stock-valuation">၉.၅ လက်ကျန်စတော့တန်ဖိုး (Stock Valuation)</a></li>
+<li><a href="#%E1%81%89%E1%81%85-%E1%80%A1%E1%80%80%E1%80%BC%E1%80%BD%E1%80%B1%E1%80%B8%E1%80%85%E1%80%AC%E1%80%9B%E1%80%84%E1%80%BA%E1%80%B8-credit-ledger">၉.၆ အကြွေးစာရင်း (Credit Ledger)</a></li>
+</ul>
+</li>
+<li><a href="#%E1%81%81%E1%81%80-%E1%80%85%E1%80%94%E1%80%85%E1%80%BA%E1%80%86%E1%80%80%E1%80%BA%E1%80%90%E1%80%84%E1%80%BA%E1%80%99%E1%80%BB%E1%80%AC%E1%80%B8%E1%80%94%E1%80%BE%E1%80%84%E1%80%B7%E1%80%BA-%E1%80%9D%E1%80%94%E1%80%BA%E1%80%91%E1%80%99%E1%80%BA%E1%80%B8%E1%80%9C%E1%80%AF%E1%80%95%E1%80%BA%E1%80%95%E1%80%AD%E1%80%AF%E1%80%84%E1%80%BA%E1%80%81%E1%80%BD%E1%80%84%E1%80%B7%E1%80%BA%E1%80%99%E1%80%BB%E1%80%AC%E1%80%B8-system-settings--permissions">စနစ်ဆက်တင်များနှင့် ဝန်ထမ်းလုပ်ပိုင်ခွင့်များ (System Settings &amp; Permissions)</a><ul>
+<li><a href="#%E1%81%81%E1%81%80%E1%81%81-%E1%80%A1%E1%80%99%E1%80%BB%E1%80%AD%E1%80%AF%E1%80%B8%E1%80%A1%E1%80%85%E1%80%AC%E1%80%B8%E1%80%94%E1%80%BE%E1%80%84%E1%80%B7%E1%80%BA-%E1%80%A1%E1%80%99%E1%80%BB%E1%80%AD%E1%80%AF%E1%80%B8%E1%80%A1%E1%80%85%E1%80%AC%E1%80%B8%E1%80%81%E1%80%BD%E1%80%B2%E1%80%99%E1%80%BB%E1%80%AC%E1%80%B8-%E1%80%85%E1%80%AE%E1%80%99%E1%80%B6%E1%80%81%E1%80%BC%E1%80%84%E1%80%BA%E1%80%B8-category--subcategory-crud">၁၀.၁ အမျိုးအစားနှင့် အမျိုးအစားခွဲများ စီမံခြင်း (Category &amp; Subcategory CRUD)</a></li>
+<li><a href="#%E1%81%81%E1%81%80%E1%81%82-%E1%80%A1%E1%80%9E%E1%80%AF%E1%80%B6%E1%80%B8%E1%80%95%E1%80%BC%E1%80%AF%E1%80%9E%E1%80%B0%E1%80%99%E1%80%BB%E1%80%AC%E1%80%B8%E1%80%94%E1%80%BE%E1%80%84%E1%80%B7%E1%80%BA-%E1%80%9C%E1%80%AF%E1%80%95%E1%80%BA%E1%80%95%E1%80%AD%E1%80%AF%E1%80%84%E1%80%BA%E1%80%81%E1%80%BD%E1%80%84%E1%80%B7%E1%80%BA%E1%80%9E%E1%80%90%E1%80%BA%E1%80%99%E1%80%BE%E1%80%90%E1%80%BA%E1%80%81%E1%80%BC%E1%80%84%E1%80%BA%E1%80%B8-user-access--roles">၁၀.၂ အသုံးပြုသူများနှင့် လုပ်ပိုင်ခွင့်သတ်မှတ်ခြင်း (User Access &amp; Roles)</a></li>
+</ul>
+</li>
+<li><a href="#%E1%81%81%E1%81%81-%E1%80%85%E1%80%94%E1%80%85%E1%80%BA%E1%80%99%E1%80%BE-%E1%80%91%E1%80%BD%E1%80%80%E1%80%BA%E1%80%81%E1%80%BD%E1%80%AC%E1%80%81%E1%80%BC%E1%80%84%E1%80%BA%E1%80%B8-logout">စနစ်မှ ထွက်ခွာခြင်း (Logout)</a></li>
+</ol>
+<hr>
+<h2>၁. စနစ်မိတ်ဆက် (Introduction)</h2>
+<p><strong>စိုက်ပျိုး (SitePyoe)</strong> သည် သစ်ပင်၊ ပန်းပင်၊ ပန်းအိုး၊ မြေသြဇာနှင့် စိုက်ပျိုးရေးသုံး ဆေးဝါးပစ္စည်းများ ရောင်းချသည့် Nursery &amp; Garden Center အရောင်းဆိုင်များအတွက် အထူးပြု ရေးဆွဲထားသော ခေတ်မီ POS &amp; စတော့ထိန်းသိမ်းရေး စနစ်ဖြစ်ပါသည်။</p>
+<h3>စနစ်၏ အဓိကအားသာချက်များ</h3>
+<ul>
+<li><strong>အပင်သီးသန့် စီမံခန့်ခွဲမှုစနစ်:</strong> ပြည်တွင်းဖြစ်ပင်များ၊ ယိုးဒယားတင်သွင်းပင်များနှင့် တရုတ်တင်သွင်းပင်များကို သီးခြားခွဲခြားမှတ်သားနိုင်ခြင်း။</li>
+<li><strong>အပင်သေဆုံးမှုနှင့် ပျက်စီးလေလွင့်မှုစနစ် (Wastage Tracking):</strong> သာမန်ကုန်စုံဆိုင်များနှင့်မတူဘဲ သက်ရှိအပင်များ သေဆုံးခြင်း၊ ရာသီဥတု/ပိုးမွှားဒဏ်ကြောင့် ပျက်စီးခြင်းများကို စာရင်းတိကျစွာ တွက်ချက်နိုင်ခြင်း။</li>
+<li><strong>ဆိုင်ခွဲပေါင်းစုံ စတော့လွှဲပြောင်းမှု (Branch Transfers):</strong> ဆိုင်ခွဲများအချင်းချင်း ပစ္စည်းလွှဲပြောင်းမှုကို ပို့ဆောင်ဆဲ (In-Transit) နှင့် လက်ခံရရှိပြီး (Received) အဆင့်များဖြင့် စနစ်တကျ စိစစ်နိုင်ခြင်း။</li>
+<li><strong>အကြွေးစာရင်း (Credit Ledger) နှင့် အမြတ်အစွန်း စာရင်းစစ်စနစ်:</strong> ကုန်ကျစရိတ် (Cost Price) နှင့် ရောင်းဈေး (Sale Price) အပေါ် အခြေခံ၍ အမှန်တကယ်ကျန်ရှိသော အသားတင်အမြတ် (Net Profit) ကို တိုက်ရိုက်တွက်ချက်ပေးခြင်း။</li>
+<li><strong>Offline / Standalone အသုံးပြုနိုင်မှု:</strong> အင်တာနက်မရှိသည့်အချိန်တွင်လည်း သီးခြား Demo / Local စနစ်ဖြင့် အဆင်ပြေချောမွေ့စွာ အလုပ်လုပ်နိုင်ခြင်း။</li>
+</ul>
+<hr>
+<h2>၂. စနစ်သို့ စတင်ဝင်ရောက်ခြင်း (Login &amp; Demo Accounts)</h2>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">စနစ်သို့ စတင်ဝင်ရောက်ခြင်း မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/01_login_screen.png', 'စနစ်သို့ စတင်ဝင်ရောက်ခြင်း မျက်နှာပြင်')">
+      <img src="./manual_assets/01_login_screen.png" alt="စနစ်သို့ စတင်ဝင်ရောက်ခြင်း မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">စနစ်သို့ စတင်ဝင်ရောက်ခြင်း မျက်နှာပြင်</div>
+  </div><h3>အသုံးပြုပုံ အဆင့်ဆင့်</h3>
+<ol>
+<li>အက်ပလီကေးရှင်းကို စတင်ဖွင့်လှစ်သည့်အခါ Login မျက်နှာပြင်ကို တွေ့မြင်ရမည်ဖြစ်ပါသည်။</li>
+<li>စနစ်တွင် လွယ်ကူလျင်မြန်စွာ စမ်းသပ်နိုင်ရန်အတွက် <strong>Demo Accounts</strong> များ ကြိုတင်ထည့်သွင်းပေးထားပါသည်-<ul>
+<li><strong>ဒေါ်လှ (Daw Hla):</strong> Super Admin (စနစ်တစ်ခုလုံးကို အပြည့်အဝ စီမံခန့်ခွဲနိုင်သူ)</li>
+<li><strong>ဦးသန့်ဇင် (U Thant Zin):</strong> Branch Manager (ဆိုင်ခွဲမန်နေဂျာ - ရန်ကုန်ဆိုင်ခွဲ)</li>
+<li><strong>မောင်မောင် (Maung Maung):</strong> Cashier (အရောင်းဝန်ထမ်း - ရန်ကုန်ဆိုင်ခွဲ)</li>
+<li><strong>စုစုလှိုင် (Su Su Hlaing):</strong> Cashier (အရောင်းဝန်ထမ်း - မန္တလေးဆိုင်ခွဲ)</li>
+</ul>
+</li>
+<li>မိမိဝင်ရောက်လိုသော အကောင့်အမည်ကတ်ပြားပေါ်သို့ နှိပ်လိုက်ရုံဖြင့် အမည်သည် အလိုအလျောက် ရွေးချယ်ပြီး ဖြစ်သွားပါမည်။</li>
+<li>ပုံသေ PIN နံပါတ်ဖြစ်သော <strong><code>1234</code></strong> ကို ရိုက်ထည့်ပြီး <strong>&quot;လော့ဂ်အင် ဝင်မည်&quot;</strong> ခလုတ်ကို နှိပ်ပါ။</li>
+</ol>
+<div class="callout tip"><div class="callout-icon">💡</div><div class="callout-content"><div class="callout-title">အကြံပြုချက် (Tip)</div><div class="callout-body">ဝန်ထမ်းတစ်ဦးချင်းစီ၏ ရာထူး (Role) အလိုက် ဘယ်ဘက်မီနူးများ၊ စာရင်းဇယားများနှင့် ဆက်တင်ခလုတ်များ ဝင်ရောက်ခွင့်ကို ကန့်သတ်ထိန်းချုပ်ထားနိုင်ပါသည်။
+</div></div></div><hr>
+<h2>၃. အရောင်းကောင်တာ (POS Terminal)</h2>
+<p>အရောင်းကောင်တာမျက်နှာပြင်သည် အရောင်းဝန်ထမ်းများ မြန်ဆန်သွက်လက်စွာ ပစ္စည်းရွေးချယ်ပြီး ဘောက်ချာဖွင့်နိုင်ရန် စီစဉ်ထားပါသည်။</p>
+<h3>၃.၁ ပစ္စည်းရွေးချယ်ခြင်းနှင့် အုပ်စုခွဲခြင်း</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">အရောင်းကောင်တာ မူလမြင်ကွင်း</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/02_pos_screen.png', 'အရောင်းကောင်တာ မူလမြင်ကွင်း')">
+      <img src="./manual_assets/02_pos_screen.png" alt="အရောင်းကောင်တာ မူလမြင်ကွင်း" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">အရောင်းကောင်တာ မူလမြင်ကွင်း</div>
+  </div><ul>
+<li><strong>အမျိုးအစား ခေါင်းစဉ်များ (Category Chips):</strong><ul>
+<li><strong>အပင်များ (Plants):</strong> နှစ်ရှည်အလှပင်၊ နှစ်ရှည်အသီးပင်၊ Indoor ပင်၊ သစ်ခွ၊ မျိုးစေ့၊ အထွေထွေ</li>
+<li><strong>ပန်းအိုးများ (Pots):</strong> ကြွေအိုး၊ ကော်အိုး၊ ဘွန်စိုင်း၊ ကွန်ကရစ်၊ စဉ့်အိုး၊ မြေအိုး</li>
+<li><strong>ဆေးနှင့် မြေသြဇာ (Chemicals):</strong> အမြစ်ဆေး၊ အပွင့်ဆေး၊ ၁၅-၁၆ ပတ်လည်၊ မြေဆွေး</li>
+<li><strong>ကိရိယာများ (Tools):</strong> ရေဖျန်းခေါင်း၊ ညှပ်ကတ်ကြေး၊ ဂေါ်ပြား</li>
+</ul>
+</li>
+<li><strong>နိုင်ငံ/ဒေသ ခွဲခြားမှု (Origin Filter):</strong><ul>
+<li><code>အားလုံး (All)</code>၊ <code>ယိုးဒယား (Thai)</code>၊ <code>တရုတ် (CN)</code>၊ <code>ပြည်တွင်း (Local)</code> ခလုတ်များဖြင့် တစ်ချက်နှိပ်ရုံဖြင့် သီးခြားရှာဖွေနိုင်ပါသည်။</li>
+</ul>
+</li>
+<li><strong>ရှာဖွေခြင်း (Search &amp; Barcode):</strong><ul>
+<li>အပေါ်ဘက်ရှိ ရှာဖွေရေးဘားတွင် အပင်အမည် (သို့) SKU/Barcode နံပါတ်ရိုက်ထည့်၍ ရှာဖွေနိုင်ပါသည်။</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h3>၃.၂ ခြင်းတောင်းတွင်း ပစ္စည်းထည့်သွင်းခြင်းနှင့် လျှော့ဈေးပေးခြင်း</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">အရောင်းကောင်တာ ပစ္စည်းထည့်သွင်းထားသော မြင်ကွင်း</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/02_pos_screen_with_cart.png', 'အရောင်းကောင်တာ ပစ္စည်းထည့်သွင်းထားသော မြင်ကွင်း')">
+      <img src="./manual_assets/02_pos_screen_with_cart.png" alt="အရောင်းကောင်တာ ပစ္စည်းထည့်သွင်းထားသော မြင်ကွင်း" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">အရောင်းကောင်တာ ပစ္စည်းထည့်သွင်းထားသော မြင်ကွင်း</div>
+  </div><ol>
+<li>ကုန်ပစ္စည်းကတ်ပြားပေါ်သို့ နှိပ်လိုက်ပါက ညာဘက်ရှိ <strong>လက်ရှိခြင်းတောင်း (Current Cart)</strong> ထဲသို့ ချက်ချင်းရောက်ရှိသွားမည်ဖြစ်ပါသည်။</li>
+<li>အရေအတွက် အတိုးအလျှော့ ပြုလုပ်လိုပါက <strong><code>+</code></strong> နှင့် <strong><code>-</code></strong> ခလုတ်များကို အသုံးပြုနိုင်ပါသည်။</li>
+<li>အကယ်၍ ပစ္စည်းတစ်ခုကို ပြန်လည်ဖျက်လိုပါက အမှိုက်ပုံးပုံစံ အနီရောင်ခလုတ်ကို နှိပ်ပါ။</li>
+<li><strong>လျှော့ဈေး (Discount):</strong><ul>
+<li>ခြင်းတောင်းအောက်ခြေရှိ <strong>Discount %</strong> ခလုတ်ကို နှိပ်၍ ဘောက်ချာတစ်ခုလုံးအပေါ် ရာခိုင်နှုန်းဖြင့် လျှော့ဈေး ပေးနိုင်ပါသည်။</li>
+</ul>
+</li>
+<li><strong>ဘောက်ချာခေတ္တဆိုင်းငံ့ခြင်း (Hold Order):</strong><ul>
+<li>ဝယ်သူမှ ပစ္စည်းထပ်မံရွေးချယ်နေစဉ် အခြားဝယ်သူအား အရင်ရောင်းပေးလိုပါက <strong>&quot;ဆိုင်းငံ့မည် (Hold Order)&quot;</strong> ခလုတ်ကို နှိပ်ထားနိုင်ပါသည်။</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2>၄. ငွေပေးချေမှုနှင့် ဘောက်ချာထုတ်ယူခြင်း (Checkout &amp; Thermal Printing)</h2>
+<h3>၄.၁ ငွေပေးချေမှုစနစ် (Payment Modal)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">ငွေပေးချေမှု မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/12_payment_dialog.png', 'ငွေပေးချေမှု မျက်နှာပြင်')">
+      <img src="./manual_assets/12_payment_dialog.png" alt="ငွေပေးချေမှု မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">ငွေပေးချေမှု မျက်နှာပြင်</div>
+  </div><p>ခြင်းတောင်းရှိ <strong>&quot;ငွေရှင်းမည် (Pay)&quot;</strong> ခလုတ်ကို နှိပ်လိုက်ပါက ငွေပေးချေမှုဆိုင်ရာ ရွေးချယ်စရာများ ပေါ်လာမည်ဖြစ်ပါသည်-</p>
+<ol>
+<li><strong>ငွေပေးချေနည်းလမ်း အမျိုးအစားများ:</strong><ul>
+<li><strong>ငွေသား (Cash):</strong> ဝယ်သူထံမှ လက်ခံရရှိသော ငွေပမာဏကို ရိုက်ထည့်နိုင်သလို အမြန်နှိပ်နိုင်သော ငွေစက္ကူခလုတ်များ (<code>25,000</code>, <code>50,000</code>, <code>100,000 Ks</code>) ကိုလည်း အသုံးပြုနိုင်ပါသည်။ စနစ်မှ ပြန်အမ်းငွေ (Change) ကို တိကျစွာ တွက်ချက်ပေးပါသည်။</li>
+<li><strong>မိုဘိုင်းဘဏ်စနစ် (KPay / Wave):</strong> QR Code ဖြင့် ပေးချေခြင်း (သို့) Transaction ID ရိုက်ထည့်၍ မှတ်သားနိုင်ပါသည်။</li>
+<li><strong>အကြွေး (Credit):</strong> ပုံမှန်ဖောက်သည်များအတွက် အကြွေးမှတ်တမ်းထားရှိပြီး ပစ္စည်းထုတ်ပေးနိုင်ပါသည်။</li>
+</ul>
+</li>
+<li>ဝယ်သူအချက်အလက်ကို <code>ဧည့်သည်ဝယ်သူ (Walk-in Customer)</code> အဖြစ် ထားရှိနိုင်သလို အမည်နှင့် ဖုန်းနံပါတ် သီးခြားထည့်သွင်း၍လည်း မှတ်သားနိုင်ပါသည်။</li>
+<li>အချက်အလက်များ ပြည့်စုံပါက <strong>&quot;ငွေလက်ခံပြီး ဘောက်ချာထုတ်မည်&quot;</strong> ခလုတ်ကို နှိပ်ပါ။</li>
+</ol>
+<hr>
+<h3>၄.၂ အပူပေး ပရင်တာ ဘောက်ချာပုံစံ (ESC/POS Thermal Receipt)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">အပူပေး ပရင်တာ ဘောက်ချာ အစမ်းမြင်ကွင်း</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/13_receipt_dialog.png', 'အပူပေး ပရင်တာ ဘောက်ချာ အစမ်းမြင်ကွင်း')">
+      <img src="./manual_assets/13_receipt_dialog.png" alt="အပူပေး ပရင်တာ ဘောက်ချာ အစမ်းမြင်ကွင်း" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">အပူပေး ပရင်တာ ဘောက်ချာ အစမ်းမြင်ကွင်း</div>
+  </div><p>စနစ်တွင် စိုက်ပျိုးရေးဆိုင်များ အသုံးပြုလေ့ရှိသော အပူပေးဘောက်ချာစက် (Thermal Receipt Printer) များနှင့် တိုက်ရိုက်ချိတ်ဆက်နိုင်သော Preview စနစ် ပါဝင်ပါသည်-</p>
+<ul>
+<li><strong>စက္ကူဆိုဒ် ရွေးချယ်မှု:</strong> <strong>58mm</strong> (စက္ကူအသေး) နှင့် <strong>80mm</strong> (စက္ကူအကြီး) စိတ်ကြိုက်ပြောင်းလဲနိုင်ခြင်း။</li>
+<li><strong>ESC/POS Network Print ချိတ်ဆက်မှု:</strong> Wi-Fi (သို့) LAN ကြိုးဖြင့် ချိတ်ဆက်ထားသော Receipt Printer ၏ IP Address (ဥပမာ <code>192.168.1.200:9100</code>) ကို ထည့်သွင်း၍ တိုက်ရိုက် Print ထုတ်နိုင်ခြင်း။</li>
+<li><strong>ဘောက်ချာပါ အချက်အလက်များ:</strong> ဆိုင်အမည်၊ ဆိုင်ခွဲ၊ ဘောက်ချာနံပါတ်၊ နေ့စွဲအချိန်၊ ရောင်းချသူဝန်ထမ်း၊ ဝယ်ယူသည့် ပစ္စည်းအမည်များနှင့် စုစုပေါင်းကျသင့်ငွေ၊ ပေးငွေနှင့် ပြန်အမ်းငွေများကို သပ်ရပ်စွာ ပုံနှိပ်ပေးပါသည်။</li>
+</ul>
+<hr>
+<h2>၅. အရောင်းဘောက်ချာမှတ်တမ်းများ (Order History &amp; Reprint)</h2>
+<p>ဘယ်ဘက်မီနူးရှိ <strong>&quot;ဘောက်ချာမှတ်တမ်းများ (Orders)&quot;</strong> ကို နှိပ်ပါက ယခင်ရောင်းချခဲ့သော ဘောက်ချာအားလုံးကို တွေ့မြင်နိုင်ပါသည်။</p>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">အရောင်းဘောက်ချာ မှတ်တမ်းများ မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/03_orders_history_screen.png', 'အရောင်းဘောက်ချာ မှတ်တမ်းများ မျက်နှာပြင်')">
+      <img src="./manual_assets/03_orders_history_screen.png" alt="အရောင်းဘောက်ချာ မှတ်တမ်းများ မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">အရောင်းဘောက်ချာ မှတ်တမ်းများ မျက်နှာပြင်</div>
+  </div><h3>အဓိက လုပ်ဆောင်ချက်များ</h3>
+<ol>
+<li><strong>ထိပ်တန်းအကျဉ်းချုပ် ကတ်ပြားများ (KPI Cards):</strong><ul>
+<li><strong>စုစုပေါင်း ဘောက်ချာစောင်ရေ:</strong> ယနေ့ရောင်းချခဲ့ရသော အရေအတွက်</li>
+<li><strong>စုစုပေါင်း အရောင်းပမာဏ:</strong> ယနေ့ရရှိသော စုစုပေါင်းငွေကျပ်</li>
+<li><strong>ပျမ်းမျှဘောက်ချာတန်ဖိုး:</strong> ဘောက်ချာတစ်စောင်လျှင် ပျမ်းမျှကျသင့်ငွေ</li>
+</ul>
+</li>
+<li><strong>အချိန်ကာလအလိုက် စစ်ထုတ်ခြင်း (Date Filters):</strong><ul>
+<li><code>ယနေ့ (Today)</code>၊ <code>ယမန်နေ့ (Yesterday)</code>၊ <code>ပြီးခဲ့သော ၇ ရက် (Last 7 Days)</code>၊ <code>ဤလ (This Month)</code> စသည်ဖြင့် စစ်ထုတ်ကြည့်ရှုနိုင်ပါသည်။</li>
+</ul>
+</li>
+<li><strong>အသေးစိတ်ကြည့်ရှုခြင်း (View Details):</strong><ul>
+<li>ဘောက်ချာတစ်ခုချင်းစီ၏ အသေးစိတ်ဝယ်ယူမှုစာရင်းကို ကြည့်ရှုလိုပါက <strong>&quot;အသေးစိတ်&quot;</strong> ခလုတ်ကို နှိပ်ပါ။</li>
+</ul>
+</li>
+</ol>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">ဘောက်ချာ အသေးစိတ် အချက်အလက်ပြ ဆွေးနွေးမှုသေတ္တာ</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/03b_order_detail_dialog.png', 'ဘောက်ချာ အသေးစိတ် အချက်အလက်ပြ ဆွေးနွေးမှုသေတ္တာ')">
+      <img src="./manual_assets/03b_order_detail_dialog.png" alt="ဘောက်ချာ အသေးစိတ် အချက်အလက်ပြ ဆွေးနွေးမှုသေတ္တာ" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">ဘောက်ချာ အသေးစိတ် အချက်အလက်ပြ ဆွေးနွေးမှုသေတ္တာ</div>
+  </div><ol start="4">
+<li><strong>ဘောက်ချာပြန်လည်ထုတ်ပေးခြင်း (Reprint Voucher):</strong><ul>
+<li>ဝယ်သူမှ ဘောက်ချာပျောက်ဆုံး၍ဖြစ်စေ၊ ထပ်မံတောင်းခံ၍ဖြစ်စေ <strong>&quot;ပြန်ထုတ်မည် (Reprint)&quot;</strong> ခလုတ်ကို နှိပ်ရုံဖြင့် မူရင်းဘောက်ချာကို ချက်ချင်း ပြန်လည် Print ထုတ်ပေးနိုင်ပါသည်။</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2>၆. ကုန်ပစ္စည်းစာရင်းနှင့် စတော့စီမံခန့်ခွဲမှု (Inventory Management)</h2>
+<p>ဆိုင်တွင်ရှိသော အပင်များ၊ ပန်းအိုးများနှင့် မြေသြဇာဆေးဝါးများ၏ လက်ကျန်အရေအတွက်ကို အချိန်နှင့်တပြေးညီ သိရှိနိုင်ရန် ဆောင်ရွက်ပေးထားပါသည်။</p>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">ကုန်ပစ္စည်းစာရင်းနှင့် စတော့စီမံခန့်ခွဲမှု မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/04_inventory_screen.png', 'ကုန်ပစ္စည်းစာရင်းနှင့် စတော့စီမံခန့်ခွဲမှု မျက်နှာပြင်')">
+      <img src="./manual_assets/04_inventory_screen.png" alt="ကုန်ပစ္စည်းစာရင်းနှင့် စတော့စီမံခန့်ခွဲမှု မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">ကုန်ပစ္စည်းစာရင်းနှင့် စတော့စီမံခန့်ခွဲမှု မျက်နှာပြင်</div>
+  </div><h3>၆.၁ စတော့စာရင်း စိစစ်ခြင်း</h3>
+<ul>
+<li><strong>ဆိုင်ခွဲရွေးချယ်မှု:</strong> <code>ရန်ကုန် ပင်မဆိုင်ခွဲ</code> နှင့် <code>မန္တလေး ဆိုင်ခွဲ</code> တို့၏ စတော့စာရင်းကို သီးခြားစီ စစ်ဆေးနိုင်ပါသည်။</li>
+<li><strong>စတော့နည်းနေသော ပစ္စည်းများ သတိပေးချက် (Low Stock Warning):</strong> သတ်မှတ်ထားသော အနည်းဆုံးအရေအတွက်အောက် လျော့နည်းသွားပါက အနီရောင် Warning Chip လေးများဖြင့် ထင်ရှားစွာ သတိပေးပါသည်။</li>
+<li><strong>စတော့အရေအတွက် အမြန်ပြင်ဆင်ခြင်း:</strong> စာရင်းစစ်သည့်အခါ ပစ္စည်းစာရင်းဘေးရှိ <strong><code>+</code></strong> နှင့် <strong><code>-</code></strong> ခလုတ်များကို အသုံးပြု၍ စတော့အတင်အချ ချက်ချင်း ပြုလုပ်နိုင်ပါသည်။</li>
+</ul>
+<hr>
+<h3>၆.၂ ပစ္စည်းအသစ်ထည့်သွင်းခြင်းနှင့် ပြင်ဆင်ခြင်း (Add / Edit Product)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">ကုန်ပစ္စည်း အချက်အလက် ဖြည့်သွင်း/ပြင်ဆင်ခြင်း မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/05_add_edit_product_dialog.png', 'ကုန်ပစ္စည်း အချက်အလက် ဖြည့်သွင်း/ပြင်ဆင်ခြင်း မျက်နှာပြင်')">
+      <img src="./manual_assets/05_add_edit_product_dialog.png" alt="ကုန်ပစ္စည်း အချက်အလက် ဖြည့်သွင်း/ပြင်ဆင်ခြင်း မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">ကုန်ပစ္စည်း အချက်အလက် ဖြည့်သွင်း/ပြင်ဆင်ခြင်း မျက်နှာပြင်</div>
+  </div><p>ပစ္စည်းအသစ်ထည့်ရန် (သို့) ရှိပြီးသားပစ္စည်းကို အသေးစိတ်ပြင်ဆင်ရန်အတွက် အောက်ပါအချက်အလက်များကို ထည့်သွင်းနိုင်ပါသည်-</p>
+<ol>
+<li><strong>အဓိကအမျိုးအစား (Main Category):</strong> အပင်များ၊ ပန်းအိုး၊ ဆေးနှင့် မြေသြဇာ၊ ကိရိယာ စသည်ဖြင့် ရွေးချယ်ပါ။</li>
+<li><strong>အမျိုးအစားခွဲ (Subcategory):</strong><ul>
+<li>ဥပမာ - <code>သစ်ခွ (Orchids)</code>၊ <code>နှစ်ရှည်အလှပင်</code>၊ <code>ကြွေအိုး</code> စသည်ဖြင့် မိမိသတ်မှတ်ထားသော အုပ်စုကို ရွေးချယ်ပါ။</li>
+</ul>
+</li>
+<li><strong>မူရင်းဒေသ/တင်သွင်းရာနိုင်ငံ (Plant Origin):</strong><ul>
+<li><code>ယိုးဒယား Import</code>၊ <code>တရုတ် Import</code> (သို့) <code>ပြည်တွင်း (Local)</code> ရွေးချယ်နိုင်ပါသည်။</li>
+</ul>
+</li>
+<li><strong>ပစ္စည်းအမည်နှင့် အရွယ်အစား (Name &amp; Spec):</strong> ပစ္စည်းအမည် (ဥပမာ - လိပ်ပြာသစ်ခွ) နှင့် အိုးအရွယ်အစား (ဥပမာ - 8 လက်မအိုး) ရိုက်ထည့်ပါ။</li>
+<li><strong>အရင်းဈေးနှင့် ရောင်းဈေး (Cost Price &amp; Sale Price):</strong><ul>
+<li><strong>ဝယ်ရင်းဈေး (Cost Price):</strong> ပစ္စည်းဝယ်ယူရရှိသော ဈေးနှုန်း</li>
+<li><strong>ရောင်းဈေး (Sale Price):</strong> ဖောက်သည်အား ရောင်းချမည့် ဈေးနှုန်း</li>
+<li><strong>အမြတ်ရာခိုင်နှုန်း (Profit Margin %):</strong> ရောင်းဈေးနှင့် ဝယ်ရင်းဈေး ထည့်သွင်းလိုက်သည်နှင့် စနစ်မှ မျှော်မှန်းအမြတ်ရာခိုင်နှုန်းကို အလိုအလျောက် တွက်ချက်ပြသပေးပါသည်။</li>
+</ul>
+</li>
+<li><strong>SKU နှင့် Barcode:</strong> ပစ္စည်းကုဒ်နံပါတ် သတ်မှတ်ပေးနိုင်ပါသည်။</li>
+<li><strong>ဓါတ်ပုံနှင့် သင်္ကေတ (Custom Image &amp; Icon Selection):</strong><ul>
+<li><strong>Gallery မှ ပုံတင်ခြင်း (Custom Image):</strong> စက်အတွင်း (Device Gallery / Camera) မှ မိမိစိတ်ကြိုက် အပင်ပုံစစ်စစ်များကို တိုက်ရိုက်ရွေးချယ်တင်သွင်းနိုင်ပါသည်။ ရွေးချယ်ထားသော ပုံကို အစမ်းကြည့်ရှုနိုင်ခြင်းနှင့် မလိုချင်ပါက ဖျက်ပစ်နိုင်ခြင်း (Remove) တို့ကို ပြုလုပ်နိုင်ပါသည်။</li>
+<li><strong>သင်္ကေတ ရွေးချယ်ခြင်း (Preset Icons):</strong> ဓါတ်ပုံမရှိပါက သစ်ပင်၊ ပန်းအိုး၊ ဆေးခွက် စသည့် Built-in သင်္ကေတများထဲမှ အလွယ်တကူ ရွေးချယ်အသုံးပြုနိုင်ပါသည်။</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2>၇. ဆိုင်ခွဲအချင်းချင်း ပစ္စည်းလွှဲပြောင်းမှု (Branch Transfers)</h2>
+<p>ဆိုင်ခွဲတစ်ခုမှ အခြားဆိုင်ခွဲတစ်ခုသို့ အပင်များနှင့် ပစ္စည်းများ လွှဲပြောင်းပို့ဆောင်ရာတွင် စာရင်းမပျောက်စေရန် စနစ်တကျ ထိန်းချုပ်ပေးပါသည်။</p>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">ဆိုင်ခွဲအချင်းချင်း ပစ္စည်းလွှဲပြောင်းမှု မှတ်တမ်းများ</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/06_transfers_screen.png', 'ဆိုင်ခွဲအချင်းချင်း ပစ္စည်းလွှဲပြောင်းမှု မှတ်တမ်းများ')">
+      <img src="./manual_assets/06_transfers_screen.png" alt="ဆိုင်ခွဲအချင်းချင်း ပစ္စည်းလွှဲပြောင်းမှု မှတ်တမ်းများ" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">ဆိုင်ခွဲအချင်းချင်း ပစ္စည်းလွှဲပြောင်းမှု မှတ်တမ်းများ</div>
+  </div><h3>၇.၁ လွှဲပြောင်းမှု အခြေအနေ (Transfer Status)</h3>
+<ul>
+<li><strong>ပို့ဆောင်ဆဲ (In-Transit):</strong> ပစ္စည်းပို့လိုက်သော်လည်း လက်ခံမည့်ဆိုင်ခွဲသို့ မရောက်သေးသော အခြေအနေဖြစ်ပြီး စတော့စာရင်းမှ ယာယီနှုတ်ယူထားပါသည်။</li>
+<li><strong>လက်ခံရရှိပြီး (Received):</strong> လက်ခံမည့်ဆိုင်ခွဲမှ ပစ္စည်းများ စစ်ဆေးပြီး <strong>&quot;ပစ္စည်းလက်ခံအတည်ပြုမည် (Confirm Receipt)&quot;</strong> ခလုတ်ကို နှိပ်လိုက်ပါက လက်ခံဆိုင်ခွဲ၏ စတော့ထဲသို့ အလိုအလျောက် ပေါင်းထည့်ပေးပါသည်။</li>
+</ul>
+<hr>
+<h3>၇.၂ လွှဲပြောင်းလွှာ အသစ်ပြုလုပ်ခြင်း (Create Transfer)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">လွှဲပြောင်းလွှာ အသစ်ဖန်တီးခြင်း မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/06b_create_transfer_screen.png', 'လွှဲပြောင်းလွှာ အသစ်ဖန်တီးခြင်း မျက်နှာပြင်')">
+      <img src="./manual_assets/06b_create_transfer_screen.png" alt="လွှဲပြောင်းလွှာ အသစ်ဖန်တီးခြင်း မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">လွှဲပြောင်းလွှာ အသစ်ဖန်တီးခြင်း မျက်နှာပြင်</div>
+  </div><ol>
+<li><strong>မူရင်းဆိုင်ခွဲ (Source Branch)</strong> နှင့် <strong>လက်ခံမည့်ဆိုင်ခွဲ (Destination Branch)</strong> ကို ရွေးချယ်ပါ။</li>
+<li>လွှဲပြောင်းလိုသော ပစ္စည်းကို ရှာဖွေပြီး အရေအတွက် ရိုက်ထည့်ပါ။ စနစ်မှ ပစ္စည်းရွေးချယ်စဉ် မူရင်းဆိုင်တွင် လက်ကျန်အရေအတွက် မည်မျှရှိသည်ကို တိုက်ရိုက်ဖော်ပြပေးပါသည်။</li>
+<li>ကားသမားအမည်၊ ဖုန်းနံပါတ် (သို့) မှတ်ချက်များကို ရိုက်ထည့်ပြီး <strong>&quot;လွှဲပြောင်းမှု အတည်ပြုမည်&quot;</strong> ကို နှိပ်ပါ။</li>
+</ol>
+<hr>
+<h2>၈. အပင်သေဆုံးမှုနှင့် ပျက်စီးလေလွင့်မှု မှတ်တမ်း (Wastage &amp; Mortality Tracking)</h2>
+<p>သစ်ပင်ပန်းမန်လုပ်ငန်းများတွင် အရေးအကြီးဆုံးဖြစ်သော သဘာဝအရ သေဆုံးပျက်စီးမှုများကြောင့် အရင်းအနှီး ဆုံးရှုံးမှုကို စာရင်းစစ်ဆေးနိုင်ရန် ဤစနစ်ကို ထည့်သွင်းထားပါသည်။</p>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">အပင်သေဆုံးမှုနှင့် ပျက်စီးလေလွင့်မှု မှတ်တမ်း မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/07_wastage_screen.png', 'အပင်သေဆုံးမှုနှင့် ပျက်စီးလေလွင့်မှု မှတ်တမ်း မျက်နှာပြင်')">
+      <img src="./manual_assets/07_wastage_screen.png" alt="အပင်သေဆုံးမှုနှင့် ပျက်စီးလေလွင့်မှု မှတ်တမ်း မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">အပင်သေဆုံးမှုနှင့် ပျက်စီးလေလွင့်မှု မှတ်တမ်း မျက်နှာပြင်</div>
+  </div><h3>အဓိက အင်္ဂါရပ်များ</h3>
+<ol>
+<li><strong>စုစုပေါင်း ဆုံးရှုံးမှုတန်ဖိုး စာရင်းစစ် (Total Loss in MMK):</strong><ul>
+<li>ပျက်စီးသွားသော ပစ္စည်းများ၏ မူလဝယ်ရင်းဈေး (Cost Price) အပေါ် မူတည်၍ လုပ်ငန်းမှ ငွေကြေးမည်မျှ ဆုံးရှုံးသွားသည်ကို စုစုပေါင်း တွက်ချက်ပြသပေးပါသည် (ဥပမာ - <code>-၅၁,၀၀၀ ကျပ်</code>)။</li>
+</ul>
+</li>
+<li><strong>ပျက်စီးရသည့် အကြောင်းအရင်းများ (Wastage Reasons):</strong><ul>
+<li><code>အပင်သေဆုံးခြင်း (Plant Mortality)</code></li>
+<li><code>ပိုးမွှားကျရောက်ခြင်း (Pest Infestation)</code></li>
+<li><code>ကွဲအက်ပျက်စီးခြင်း (Broken / Damaged Pots)</code></li>
+<li><code>ရက်လွန်မြေဆွေး/ဆေးဝါး ပျက်စီးခြင်း (Expired Chemicals)</code></li>
+</ul>
+</li>
+<li><strong>စာရင်းသွင်းခြင်း (Log Damage):</strong><ul>
+<li>ပျက်စီးသွားသော ပစ္စည်း၊ အရေအတွက်နှင့် အကြောင်းအရင်းကို မှတ်တမ်းတင်လိုက်သည်နှင့် စတော့စာရင်းမှ ချက်ချင်း အလိုအလျောက် နှုတ်ပယ်ပေးပြီး လစဉ်အရှုံးအမြတ်စာရင်းတွင် ဆုံးရှုံးစရိတ်အဖြစ် ထည့်သွင်းတွက်ချက်ပေးပါသည်။</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2>၉. လုပ်ငန်းသုံး အစီရင်ခံစာနှင့် ဘဏ္ဍာရေးစာရင်းများ (Reports &amp; Analytics)</h2>
+<p>လုပ်ငန်းရှင်များအနေဖြင့် ဆိုင်၏ အရောင်းအခြေအနေ၊ ရင်းနှီးငွေနှင့် အသားတင်အမြတ်ငွေများကို မျက်ခြည်မပြတ် စောင့်ကြည့်နိုင်ရန် အစီရင်ခံစာ ကဏ္ဍ (၆) မျိုးဖြင့် ဖွဲ့စည်းထားပါသည်။</p>
+<hr>
+<h3>၉.၁ စာရင်းချုပ်ခြုံငုံသုံးသပ်ချက် (Overview)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">ဘဏ္ဍာရေး စာရင်းချုပ်ခြုံငုံသုံးသပ်ချက် မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/11_reports_screen.png', 'ဘဏ္ဍာရေး စာရင်းချုပ်ခြုံငုံသုံးသပ်ချက် မျက်နှာပြင်')">
+      <img src="./manual_assets/11_reports_screen.png" alt="ဘဏ္ဍာရေး စာရင်းချုပ်ခြုံငုံသုံးသပ်ချက် မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">ဘဏ္ဍာရေး စာရင်းချုပ်ခြုံငုံသုံးသပ်ချက် မျက်နှာပြင်</div>
+  </div><ul>
+<li><strong>စုစုပေါင်း အရောင်းဝင်ငွေ (Gross Revenue):</strong> ရောင်းချရရှိသော စုစုပေါင်းငွေ</li>
+<li><strong>ကုန်ကျစရိတ် (Cost of Goods Sold - COGS):</strong> ရောင်းချခဲ့ရသော ပစ္စည်းများ၏ မူရင်းဝယ်ရင်းဈေး</li>
+<li><strong>စုစုပေါင်း အကြမ်းဖျင်းအမြတ် (Gross Profit):</strong> အရောင်းဝင်ငွေထဲမှ ကုန်ကျစရိတ်ကို နှုတ်ထားသောငွေ (ဥပမာ - ၃၉.၁%)</li>
+<li><strong>ပျက်စီးဆုံးရှုံးမှုစရိတ် (Wastage Loss):</strong> သေဆုံးပျက်စီးသွားသော အပင်များ၏ ဆုံးရှုံးငွေ (ဥပမာ - <code>-၅၁,၀၀၀ ကျပ်</code>)</li>
+<li><strong>အသားတင်အမြတ် (Net Profit):</strong> ဆုံးရှုံးစရိတ်များ နှုတ်ပြီးနောက် လုပ်ငန်းရှင် လက်ထဲ အမှန်တကယ် ကျန်ရှိသော အမြတ်ငွေ (ဥပမာ - ၂၂.၈%)</li>
+<li><strong>အမျိုးအစားအလိုက် အမြတ်ရာခိုင်နှုန်း (Category Margin Breakdown):</strong> အပင်များ၊ ပန်းအိုးများနှင့် ဆေးဝါးများအနက် မည်သည့်အမျိုးအစားက အမြတ်ရာခိုင်နှုန်း အများဆုံး ရရှိသည်ကို ဇယားဖြင့် ပြသပေးခြင်း။</li>
+</ul>
+<hr>
+<h3>၉.၂ အရောင်းစာရင်း (Sales Transactions)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">အရောင်းစာရင်း မှတ်တမ်းများ ဇယား</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/11b_reports_sales_tab.png', 'အရောင်းစာရင်း မှတ်တမ်းများ ဇယား')">
+      <img src="./manual_assets/11b_reports_sales_tab.png" alt="အရောင်းစာရင်း မှတ်တမ်းများ ဇယား" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">အရောင်းစာရင်း မှတ်တမ်းများ ဇယား</div>
+  </div><ul>
+<li>ဘောက်ချာတစ်ခုချင်းစီအလိုက် ရောင်းချခဲ့သော ဆိုင်ခွဲ၊ နေ့စွဲအချိန်၊ ပေးချေသည့်စနစ် (Cash / KPay / Credit) နှင့် စုစုပေါင်း ပမာဏများကို ဇယားကွက်ဖြင့် စစ်ဆေးနိုင်ပါသည်။</li>
+<li>လိုအပ်သော ဆိုင်ခွဲ (သို့) ငွေပေးချေမှုပုံစံအလိုက် ခွဲခြားကြည့်ရှုနိုင်ပါသည်။</li>
+</ul>
+<hr>
+<h3>၉.၃ အဝယ်စာရင်း (Purchases Report)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">အဝယ်စာရင်း အစီရင်ခံစာ မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/11c_reports_purchases_tab.png', 'အဝယ်စာရင်း အစီရင်ခံစာ မျက်နှာပြင်')">
+      <img src="./manual_assets/11c_reports_purchases_tab.png" alt="အဝယ်စာရင်း အစီရင်ခံစာ မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">အဝယ်စာရင်း အစီရင်ခံစာ မျက်နှာပြင် (ဘောင်ချာများ၊ စစ်ထုတ်မှုများနှင့် အကျဉ်းချုပ် ကတ်များ)</div>
+  </div><ul>
+<li><strong>ဝယ်ယူမှု အကျဉ်းချုပ် (KPIs):</strong> စုစုပေါင်း ဝယ်ယူမှု (Gross Purchases)၊ ရှင်းပြီး ငွေပမာဏ (Paid Amount)၊ ပေးရန်ကျန် အကြွေး (Outstanding Due) နှင့် ပစ္စည်းသွင်းကုန်သည် အရေအတွက် (Suppliers Count) တို့ကို ထိပ်ဆုံးတွင် အချိန်နှင့်တပြေးညီ တွက်ချက်ပြသပေးပါသည်။</li>
+<li><strong>အဝယ်ဘောင်ချာများ စာရင်း (Vouchers Table):</strong> ဘောင်ချာနံပါတ်၊ ဝယ်ယူသည့်ရက်စွဲ၊ ကုန်သည်အမည်၊ သွင်းသည့်ဆိုင်ခွဲ၊ ပစ္စည်းအရေအတွက်၊ စုစုပေါင်းကျသင့်ငွေ၊ ရှင်းပြီးငွေ၊ ကျန်ငွေနှင့် ငွေပေးချေမှုအခြေအနေ (<code>ငွေကြေ (Paid)</code>၊ <code>တစ်စိတ်ပေး (Partial)</code>၊ <code>အကြွေး (Credit)</code>) တို့ကို စစ်ဆေးနိုင်ပြီး ဘောင်ချာအတန်းကို နှိပ်ပါက ဘောင်ချာအသေးစိတ် (Detail Dialog) ကို ဖွင့်ကြည့်နိုင်ပါသည်။</li>
+<li><strong>ကုန်သည်အလိုက် စာရင်း (By Vendor):</strong> ပစ္စည်းသွင်းကုန်သည်တစ်ဦးချင်းစီအလိုက် စုစုပေါင်း ဝယ်ယူမှု၊ ရှင်းပြီးငွေနှင့် ပေးရန်ကျန်ငွေများကို ကတ်ပြားများဖြင့် ရှင်းလင်းစွာ ခွဲခြမ်းစိတ်ဖြာနိုင်ပါသည်။</li>
+<li><strong>ပစ္စည်းကဏ္ဍအလိုက် အဝယ်စရိတ် (By Category):</strong> အပင်များ၊ ဆေး/မြေဩဇာ၊ ပန်းအိုးများနှင့် ကိရိယာများအနက် မည်သည့်ပစ္စည်းကဏ္ဍတွင် အဝယ်စရိတ် အများဆုံး ရင်းနှီးထားသည်ကို ရာခိုင်နှုန်း ဝေစုများဖြင့် လေ့လာနိုင်ပါသည်။</li>
+<li><strong>စစ်ထုတ်နိုင်သော စနစ်များ (Filters):</strong> နေ့စွဲ (ယနေ့၊ မနေ့က၊ ဒီအပတ်၊ ဒီလ၊ ကာလအပိုင်းအခြား)၊ ဆိုင်ခွဲ၊ ငွေပေးချေမှု အခြေအနေနှင့် ကုန်သည်အလိုက် အလွယ်တကူ ရှာဖွေနိုင်ပါသည်။</li>
+</ul>
+<hr>
+<h3>၉.၄ ပစ္စည်းအလိုက် အမြတ်အစွန်း (Product-wise Sales &amp; Profit)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">ပစ္စည်းအလိုက် အရောင်းနှင့် အမြတ်အစွန်း ဇယား</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/11c_reports_product_wise_tab.png', 'ပစ္စည်းအလိုက် အရောင်းနှင့် အမြတ်အစွန်း ဇယား')">
+      <img src="./manual_assets/11c_reports_product_wise_tab.png" alt="ပစ္စည်းအလိုက် အရောင်းနှင့် အမြတ်အစွန်း ဇယား" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">ပစ္စည်းအလိုက် အရောင်းနှင့် အမြတ်အစွန်း ဇယား</div>
+  </div><ul>
+<li>မည်သည့်အပင် (သို့) ပစ္စည်းက အရေအတွက် မည်မျှ ရောင်းချခဲ့ရသည်ကို ဖော်ပြပေးပါသည်။</li>
+<li>ပစ္စည်းတစ်ခုချင်းစီ၏ စုစုပေါင်းအရောင်းငွေ၊ ကုန်ကျစရိတ်နှင့် <strong>ရရှိသော အသားတင်အမြတ် (Profit) နှင့် အမြတ်ရာခိုင်နှုန်း (Margin %)</strong> ကို တစ်ခုချင်းစီ အသေးစိတ် နှိုင်းယှဉ်ပြသပေးပါသည်။</li>
+</ul>
+<hr>
+<h3>၉.၅ လက်ကျန်စတော့တန်ဖိုး (Stock Valuation)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">လက်ကျန်စတော့တန်ဖိုး စာရင်းစစ်ဆေးမှု မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/11d_reports_valuation_tab.png', 'လက်ကျန်စတော့တန်ဖိုး စာရင်းစစ်ဆေးမှု မျက်နှာပြင်')">
+      <img src="./manual_assets/11d_reports_valuation_tab.png" alt="လက်ကျန်စတော့တန်ဖိုး စာရင်းစစ်ဆေးမှု မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">လက်ကျန်စတော့တန်ဖိုး စာရင်းစစ်ဆေးမှု မျက်နှာပြင်</div>
+  </div><ul>
+<li>လက်ရှိဆိုင်တွင် ကျန်ရှိနေသော ပစ္စည်းအားလုံး၏ <strong>မူရင်းရင်းနှီးမြှုပ်နှံငွေတန်ဖိုး (Total Cost Asset Value - ဥပမာ ၄,၉၅၄,၀၀၀ ကျပ်)</strong> နှင့် ရောင်းချပါက ရရှိမည့် <strong>စုစုပေါင်း ရောင်းဈေးတန်ဖိုး (Retail Value - ဥပမာ ၈,၃၂၁,၀၀၀ ကျပ်)</strong> ကို တိုက်ရိုက်တွက်ချက်ပြသပေးပါသည်။</li>
+<li>ပစ္စည်းအားလုံး ရောင်းထွက်ပါက ရရှိနိုင်မည့် မျှော်မှန်းအမြတ်ငွေ (Unrealized Profit) ကို ဖော်ပြပေးပြီး Excel/CSV ဖိုင်အဖြစ် ဒေါင်းလုဒ်ရယူနိုင်ပါသည်။</li>
+</ul>
+<hr>
+<h3>၉.၆ အကြွေးစာရင်း (Credit Ledger)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">အကြွေးစာရင်း စီမံခန့်ခွဲမှု မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/11e_reports_credit_ledger_tab.png', 'အကြွေးစာရင်း စီမံခန့်ခွဲမှု မျက်နှာပြင်')">
+      <img src="./manual_assets/11e_reports_credit_ledger_tab.png" alt="အကြွေးစာရင်း စီမံခန့်ခွဲမှု မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">အကြွေးစာရင်း စီမံခန့်ခွဲမှု မျက်နှာပြင်</div>
+  </div><ul>
+<li>အကြွေးဖြင့် ဝယ်ယူသွားသော ဖောက်သည်များ၏ အမည်၊ ဖုန်းနံပါတ်၊ ကျန်ရှိသောအကြွေးပမာဏနှင့် နောက်ဆုံးပေးချေခဲ့သော နေ့စွဲများကို စနစ်တကျ မှတ်တမ်းတင်ပေးထားပါသည်။</li>
+<li>ဖောက်သည်မှ အကြွေးငွေ လာရောက်ဆပ်သည့်အခါ <strong>&quot;အကြွေးဆပ်မည် (Collect)&quot;</strong> ခလုတ်ကို နှိပ်၍ တစ်စိတ်တစ်ပိုင်း (သို့) အပြေအကျေ စာရင်းရှင်းလင်းနိုင်ပါသည်။</li>
+</ul>
+<hr>
+<h2>၁၀. စနစ်ဆက်တင်များနှင့် ဝန်ထမ်းလုပ်ပိုင်ခွင့်များ (System Settings &amp; Permissions)</h2>
+<hr>
+<h3>၁၀.၁ အမျိုးအစားနှင့် အမျိုးအစားခွဲများ စီမံခြင်း (Category &amp; Subcategory CRUD)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">အမျိုးအစားနှင့် အမျိုးအစားခွဲများ စီမံခန့်ခွဲမှု မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/08_settings_categories.png', 'အမျိုးအစားနှင့် အမျိုးအစားခွဲများ စီမံခန့်ခွဲမှု မျက်နှာပြင်')">
+      <img src="./manual_assets/08_settings_categories.png" alt="အမျိုးအစားနှင့် အမျိုးအစားခွဲများ စီမံခန့်ခွဲမှု မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">အမျိုးအစားနှင့် အမျိုးအစားခွဲများ စီမံခန့်ခွဲမှု မျက်နှာပြင်</div>
+  </div><p>စိုက်ပျိုးရေးဆိုင်၏ လိုအပ်ချက်အရ ပစ္စည်းအမျိုးအစားများကို လွတ်လပ်စွာ ထပ်တိုးခြင်း၊ ပြင်ဆင်ခြင်းနှင့် ဖျက်ပယ်ခြင်း ပြုလုပ်နိုင်ပါသည်-</p>
+<ol>
+<li><strong>ပင်မအမျိုးအစားများ (Main Categories):</strong><ul>
+<li><code>အပင်များ</code>၊ <code>ပန်းအိုးများ</code>၊ <code>ဆေးနှင့် မြေသြဇာ</code>၊ <code>ကိရိယာများ</code>၊ <code>အထွေထွေ</code> စသည်ဖြင့် မိမိစိတ်ကြိုက် အသစ်ထည့်သွင်းနိုင်ပါသည်။</li>
+</ul>
+</li>
+<li><strong>အမျိုးအစားခွဲများ စီမံခြင်း (Subcategory Management):</strong><ul>
+<li>ဥပမာ - <strong>အပင်များ</strong> အောက်တွင် <code>နှစ်ရှည်အလှပင်</code>၊ <code>နှစ်ရှည်အသီးပင်</code>၊ <code>Indoor ပင်</code>၊ <code>သစ်ခွ</code>၊ <code>မျိုးစေ့</code>၊ <code>အထွေထွေ</code> ဟူ၍ စိတ်ကြိုက်ခွဲခြားနိုင်ခြင်း။</li>
+<li><strong>ပန်းအိုးများ</strong> အောက်တွင် <code>ကြွေအိုး</code>၊ <code>ကော်အိုး</code>၊ <code>ဘွန်စိုင်း</code>၊ <code>ကွန်ကရစ်</code>၊ <code>စဉ့်အိုး</code>၊ <code>မြေအိုး</code> ဟူ၍ ထည့်သွင်းနိုင်ခြင်း။</li>
+<li><strong>ဆေးနှင့် မြေသြဇာ</strong> အောက်တွင် <code>အမြစ်ဆေး</code>၊ <code>အပွင့်ဆေး</code>၊ <code>၁၅-၁၆ ပတ်လည်</code> ဟူ၍ သတ်မှတ်နိုင်ခြင်း။</li>
+</ul>
+</li>
+<li>အမျိုးအစားခွဲတစ်ခုချင်းစီကို အမည်ပြင်ဆင်ခြင်း (Edit) သို့မဟုတ် မလိုလားအပ်ပါက ဖျက်ပယ်ခြင်း (Delete) ပြုလုပ်နိုင်ပါသည်။</li>
+</ol>
+<hr>
+<h3>၁၀.၂ အသုံးပြုသူများနှင့် လုပ်ပိုင်ခွင့်သတ်မှတ်ခြင်း (User Access &amp; Roles)</h3>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">အသုံးပြုသူများနှင့် လုပ်ပိုင်ခွင့် စီမံခန့်ခွဲမှု မျက်နှာပြင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/09_settings_user_roles.png', 'အသုံးပြုသူများနှင့် လုပ်ပိုင်ခွင့် စီမံခန့်ခွဲမှု မျက်နှာပြင်')">
+      <img src="./manual_assets/09_settings_user_roles.png" alt="အသုံးပြုသူများနှင့် လုပ်ပိုင်ခွင့် စီမံခန့်ခွဲမှု မျက်နှာပြင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">အသုံးပြုသူများနှင့် လုပ်ပိုင်ခွင့် စီမံခန့်ခွဲမှု မျက်နှာပြင်</div>
+  </div><p>ဆိုင်ခွဲများရှိ ဝန်ထမ်းတစ်ဦးချင်းစီ၏ လုံခြုံရေးနှင့် လုပ်ပိုင်ခွင့်များကို အသေးစိတ် သတ်မှတ်နိုင်ပါသည်-</p>
+<ul>
+<li><strong>ရာထူးအဆင့်ဆင့် သတ်မှတ်ချက်များ:</strong><ul>
+<li><strong>Super Admin:</strong> စနစ်တစ်ခုလုံး၊ ဈေးနှုန်းများ၊ ဘဏ္ဍာရေးအစီရင်ခံစာများနှင့် ဝန်ထမ်းအကောင့်များကို စီမံနိုင်သူ။</li>
+<li><strong>Branch Manager:</strong> ဆိုင်ခွဲစတော့များ၊ ပစ္စည်းလွှဲပြောင်းမှုများနှင့် အရောင်းစာရင်းများကို ကြည့်ရှုစီမံနိုင်သူ။</li>
+<li><strong>Cashier (အရောင်းဝန်ထမ်း):</strong> POS အရောင်းကောင်တာနှင့် ဘောက်ချာထုတ်ခြင်းကိုသာ ပြုလုပ်ခွင့်ရှိပြီး အခြားဘဏ္ဍာရေးအစီရင်ခံစာများကို ဝင်ရောက်ခွင့် ကန့်သတ်ထားသူ။</li>
+</ul>
+</li>
+<li><strong>အကောင့် ဖွင့်/ပိတ် ပြုလုပ်ခြင်း (Active Status Switch):</strong> ဝန်ထမ်းအလုပ်ထွက်သွားပါက (သို့) ခွင့်ရက်ဖြစ်ပါက Switch ခလုတ်လေးကို ပိတ်ထားရုံဖြင့် အကောင့်ကို ယာယီပိတ်ထားနိုင်ပါသည်။</li>
+<li><strong>ဆိုင်ခွဲ တာဝန်ပေးအပ်ခြင်း (Branch Assignment):</strong> ဝန်ထမ်းတစ်ဦးချင်းစီအား မိမိတာဝန်ကျရာ ဆိုင်ခွဲ (ဥပမာ - ရန်ကုန်ဆိုင်ခွဲ သို့မဟုတ် မန္တလေးဆိုင်ခွဲ) သို့ သီးသန့်တာဝန်ပေးနိုင်ပါသည်။</li>
+</ul>
+<hr>
+<h2>၁၁. စနစ်မှ ထွက်ခွာခြင်း (Logout)</h2>
+<div class="screenshot-card">
+    <div class="screenshot-header">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+      <span class="screenshot-title">စနစ်မှ ထွက်ခွာခြင်း အတည်ပြုချက် မူဘောင်</span>
+    </div>
+    <div class="screenshot-wrapper" onclick="openLightbox('./manual_assets/10_logout_dialog.png', 'စနစ်မှ ထွက်ခွာခြင်း အတည်ပြုချက် မူဘောင်')">
+      <img src="./manual_assets/10_logout_dialog.png" alt="စနစ်မှ ထွက်ခွာခြင်း အတည်ပြုချက် မူဘောင်" loading="lazy" />
+      <div class="zoom-overlay">🔍 ပုံကြီးချဲ့ကြည့်ရှုရန် နှိပ်ပါ</div>
+    </div>
+    <div class="screenshot-caption">စနစ်မှ ထွက်ခွာခြင်း အတည်ပြုချက် မူဘောင်</div>
+  </div><p>အရောင်းတာဝန်ချိန် ပြီးဆုံးသည့်အခါ (သို့) အခြားဝန်ထမ်းတစ်ဦးသို့ အလှည့်လွှဲပြောင်းသည့်အခါ အောက်ဘက်ရှိ <strong>&quot;လော့ဂ်အာဂျတ် (Logout)&quot;</strong> ခလုတ်ကို နှိပ်၍ လုံခြုံစွာ ထွက်ခွာနိုင်ပါသည်။ စနစ်မှ အမှန်တကယ် ထွက်ခွာလိုခြင်း ရှိ/မရှိ အတည်ပြုမေးမြန်းပေးပါမည်။</p>
+<hr>
+<h2>၁၂. ဖောက်သည်များအတွက် စမ်းသပ်အသုံးပြုရန် လမ်းညွှန်ချက် (Client Testing &amp; Offline Demo)</h2>
+<p>ဖောက်သည်ထံသို့ စနစ်အား အစမ်းပြသရန်အတွက် အင်တာနက် သို့မဟုတ် Backend ဆာဗာ တင်ထားရန် မလိုအပ်ဘဲ အသင့်သုံးစွဲနိုင်ရန် စီစဉ်ထားပါသည်-</p>
+<ol>
+<li><strong>Android Tablet (သို့) ဖုန်းတွင် ထည့်သွင်းခြင်း:</strong><ul>
+<li>ဖန်တီးထားသော <code>app-release.apk</code> ကို Android စက်ထဲသို့ ထည့်သွင်း install ပြုလုပ်ပါ။</li>
+</ul>
+</li>
+<li><strong>Demo စမ်းသပ်မှု စီးဆင်းမှု (Recommended Demo Flow):</strong><ul>
+<li><strong>အဆင့် ၁:</strong> <code>ဒေါ်လှ (Super Admin)</code> ဖြင့် Login ဝင်ပါ (PIN: <code>1234</code>)။</li>
+<li><strong>အဆင့် ၂:</strong> POS တွင် <code>ယိုးဒယား</code> ပင်များနှင့် <code>ပန်းအိုး</code> များကို ရွေးချယ်ပြီး Cart ထဲထည့်ပါ၊ Discount ထည့်ပြီး Cash (သို့) KPay ဖြင့် Checkout လုပ်၍ Receipt Preview စစ်ဆေးပါ။</li>
+<li><strong>အဆင့် ၃:</strong> <code>Orders</code> တွင် ရောင်းချပြီးသော ဘောက်ချာကို ပြန်လည်ကြည့်ရှုပြီး Reprint စမ်းသပ်ပါ။</li>
+<li><strong>အဆင့် ၄:</strong> <code>Inventory</code> တွင် အပင်အသစ်တစ်ခုကို အရင်းဈေး၊ ရောင်းဈေးနှင့် Margin % တွက်ချက်၍ ထည့်သွင်းပြသပါ။</li>
+<li><strong>အဆင့် ၅:</strong> <code>Wastage</code> သို့သွား၍ သေဆုံးသွားသော အပင်စာရင်းကို မှတ်တမ်းတင်ပြီး Total Loss ငွေကြေးပြောင်းလဲမှုကို ပြသပါ။</li>
+<li><strong>အဆင့် ၆:</strong> <code>Reports</code> သို့သွား၍ Gross Profit၊ Wastage Loss နှင့် အသားတင်အမြတ် (Net Profit) များ၊ Stock Valuation လက်ကျန်တန်ဖိုးများကို ရှင်းလင်းပြသပါ။</li>
+<li><strong>အဆင့် ၇:</strong> <code>Settings</code> သို့သွား၍ အမျိုးအစားခွဲ (Subcategory) အသစ်တစ်ခု ထည့်သွင်းပြသပါ။</li>
+</ul>
+</li>
+</ol>
+<hr>
+<p><em>SitePyoe Nursery POS System - စိုက်ပျိုးရေးနှင့် ဥယျာဉ်ခြံမြေ အရောင်းဆိုင်များအတွက် အပြည့်စုံဆုံး လက်တွဲဖော်</em></p>
+
+
+      <!-- Footer -->
+      <footer class="page-footer">
+        SitePyoe Nursery POS System &copy; 2026. All Rights Reserved. Client Review & Offline Demo Manual.
+      </footer>
+
+    </main>
+  </div>
+
+  <!-- Lightbox Modal -->
+  <div id="lightbox" class="lightbox-modal" onclick="closeLightbox()">
+    <span class="lightbox-close">&times;</span>
+    <img id="lightbox-img" class="lightbox-content" src="" alt="" onclick="event.stopPropagation()" />
+    <div id="lightbox-title" class="lightbox-title"></div>
+  </div>
+
+  <script>
+    function openLightbox(src, title) {
+      const modal = document.getElementById('lightbox');
+      const img = document.getElementById('lightbox-img');
+      const titleEl = document.getElementById('lightbox-title');
+      img.src = src;
+      titleEl.innerText = title;
+      modal.classList.add('active');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('active');
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeLightbox();
+    });
+  </script>
+</body>
+</html>

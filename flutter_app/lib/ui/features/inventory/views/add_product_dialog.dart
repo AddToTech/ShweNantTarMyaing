@@ -1,0 +1,1131 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../data/mock/mock_products.dart';
+import '../../../shared/widgets/product_avatar.dart';
+import '../../settings/view_models/category_notifier.dart';
+import '../view_models/inventory_notifier.dart';
+
+class AddProductDialog extends ConsumerStatefulWidget {
+  const AddProductDialog({
+    super.key,
+    this.productToEdit,
+    this.initialBranchStockA,
+    this.initialBranchStockB,
+  });
+
+  final MockProduct? productToEdit;
+  final int? initialBranchStockA;
+  final int? initialBranchStockB;
+
+  bool get isEditing => productToEdit != null;
+
+  static Future<void> show(
+    BuildContext context, {
+    MockProduct? productToEdit,
+    int? initialBranchStockA,
+    int? initialBranchStockB,
+  }) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AddProductDialog(
+        productToEdit: productToEdit,
+        initialBranchStockA: initialBranchStockA,
+        initialBranchStockB: initialBranchStockB,
+      ),
+    );
+  }
+
+  @override
+  ConsumerState<AddProductDialog> createState() => _AddProductDialogState();
+}
+
+class _AddProductDialogState extends ConsumerState<AddProductDialog> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _nameCtrl = TextEditingController();
+  final _skuCtrl = TextEditingController();
+  final _barcodeCtrl = TextEditingController();
+  final _salePriceCtrl = TextEditingController();
+  final _costPriceCtrl = TextEditingController();
+  final _stockACtrl = TextEditingController(text: '10');
+  final _stockBCtrl = TextEditingController(text: '5');
+  final _minStockCtrl = TextEditingController(text: '5');
+  final _sizeLabelCtrl = TextEditingController();
+
+  ProductCategory _category = ProductCategory.plants;
+  String? _selectedCategoryId;
+  String? _selectedCategoryName;
+  OriginType _originType = OriginType.thaiImport;
+  String _subcategory = 'အထွေထွေ';
+  String _selectedEmoji = '🪴';
+  String? _customImagePath;
+
+  static const Map<ProductCategory, List<String>> _categoryEmojis = {
+    ProductCategory.plants: ['🪴', '🌿', '🌸', '🌺', '🌹', '🌻', '🥭', '🎍'],
+    ProductCategory.pots: ['🏺', '🪴', '🧱', '🪨', '🥣', '🟫'],
+    ProductCategory.chemicals: ['🧪', '💧', '🧴', '🌱', '⚡️'],
+    ProductCategory.tools: ['✂️', '🪓', '🪣', '⛏️', '🧤', '🚿'],
+    ProductCategory.others: ['🌍', '🪨', '📦', '🏷️', '🪵'],
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isEditing) {
+      final p = widget.productToEdit!;
+      _nameCtrl.text = p.name;
+      _skuCtrl.text = p.sku;
+      _barcodeCtrl.text = p.barcode ?? '';
+      _salePriceCtrl.text = p.salePrice == p.salePrice.roundToDouble()
+          ? p.salePrice.toInt().toString()
+          : p.salePrice.toString();
+      _costPriceCtrl.text = p.costPrice == p.costPrice.roundToDouble()
+          ? p.costPrice.toInt().toString()
+          : p.costPrice.toString();
+      _stockACtrl.text = (widget.initialBranchStockA ?? p.stock).toString();
+      _stockBCtrl.text = (widget.initialBranchStockB ?? 0).toString();
+      _minStockCtrl.text = p.minStock.toString();
+      _sizeLabelCtrl.text = p.sizeLabel ?? '';
+      _category = p.category;
+      _selectedCategoryId = p.categoryId;
+      _selectedCategoryName = p.categoryName;
+      _originType = p.originType ?? OriginType.thaiImport;
+      _subcategory = p.subcategory.isNotEmpty ? p.subcategory : 'အထွေထွေ';
+      _selectedEmoji = p.imageEmoji;
+      _customImagePath = p.customImagePath;
+    } else {
+      _generateSkuAndBarcode();
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _skuCtrl.dispose();
+    _barcodeCtrl.dispose();
+    _salePriceCtrl.dispose();
+    _costPriceCtrl.dispose();
+    _stockACtrl.dispose();
+    _stockBCtrl.dispose();
+    _minStockCtrl.dispose();
+    _sizeLabelCtrl.dispose();
+    super.dispose();
+  }
+
+  void _generateSkuAndBarcode() {
+    final prefix = switch (_category) {
+      ProductCategory.plants => 'PLT',
+      ProductCategory.pots => 'POT',
+      ProductCategory.chemicals => 'CHM',
+      ProductCategory.tools => 'TLS',
+      ProductCategory.others => 'OTH',
+      ProductCategory.all => 'PRD',
+    };
+    final randNum = (100 + Random().nextInt(900)).toString();
+    _skuCtrl.text = '$prefix-$randNum';
+    _barcodeCtrl.text = '885${Random().nextInt(90000000) + 10000000}';
+  }
+
+  List<String> _getSubcategories(ProductCategory category) {
+    final dynamicSubs = ref
+        .read(categoryNotifierProvider.notifier)
+        .getSubcategoriesForCategory(category, categoryId: _selectedCategoryId);
+    if (dynamicSubs.isNotEmpty) return dynamicSubs;
+    return const ['အထွေထွေ'];
+  }
+
+  void _onCategoryItemSelected(CategoryItem item) {
+    setState(() {
+      _selectedCategoryId = item.id;
+      _selectedCategoryName = item.name;
+      _category = item.standardCategory ?? ProductCategory.others;
+      final subs = item.subcategories.isNotEmpty
+          ? item.subcategories
+          : _getSubcategories(_category);
+      _subcategory = subs.isNotEmpty ? subs.first : 'အထွေထွေ';
+      final emojis = item.standardCategory != null
+          ? (_categoryEmojis[item.standardCategory!] ?? [item.emoji])
+          : [item.emoji, '📦', '🏷️', '🌿', '🪴'];
+      _selectedEmoji = emojis.first;
+      if (!widget.isEditing) {
+        _generateSkuAndBarcode();
+      }
+    });
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (pickedFile != null) {
+        setState(() {
+          _customImagePath = pickedFile.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ဓာတ်ပုံရွေးချယ်ရာတွင် အဆင်မပြေပါ: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveProduct() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final salePrice = double.tryParse(_salePriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
+    final costPrice = double.tryParse(_costPriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
+    final stockA = int.tryParse(_stockACtrl.text.trim()) ?? 0;
+    final stockB = int.tryParse(_stockBCtrl.text.trim()) ?? 0;
+    final minStock = int.tryParse(_minStockCtrl.text.trim()) ?? 5;
+
+    if (widget.isEditing) {
+      final updatedProduct = widget.productToEdit!.copyWith(
+        name: _nameCtrl.text.trim(),
+        category: _category,
+        categoryId: _selectedCategoryId,
+        categoryName: _selectedCategoryName,
+        subcategory: _subcategory,
+        salePrice: salePrice,
+        costPrice: costPrice,
+        stock: stockA,
+        minStock: minStock,
+        originType: _category == ProductCategory.plants ? _originType : null,
+        sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
+        imageEmoji: _selectedEmoji,
+        customImagePath: _customImagePath,
+        clearCustomImage: _customImagePath == null,
+        sku: _skuCtrl.text.trim(),
+        barcode: _barcodeCtrl.text.trim().isNotEmpty ? _barcodeCtrl.text.trim() : null,
+      );
+
+      final ok = await ref.read(catalogProvider.notifier).updateProduct(
+            updatedProduct,
+            stockBranchA: stockA,
+            stockBranchB: stockB,
+          );
+
+      if (!ok || !mounted) return;
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              ProductAvatar(
+                imageEmoji: _selectedEmoji,
+                customImagePath: _customImagePath,
+                size: 24,
+                fontSize: 18,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('ကုန်ပစ္စည်း "${updatedProduct.name}" အချက်အလက်များကို ပြင်ဆင်ပြီးပါပြီ။'),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    final newId = 'prod_${DateTime.now().millisecondsSinceEpoch}';
+
+    final newProduct = MockProduct(
+      id: newId,
+      name: _nameCtrl.text.trim(),
+      category: _category,
+      categoryId: _selectedCategoryId,
+      categoryName: _selectedCategoryName,
+      subcategory: _subcategory,
+      salePrice: salePrice,
+      costPrice: costPrice,
+      stock: stockA, // Default display stock reflects Branch A
+      minStock: minStock,
+      originType: _category == ProductCategory.plants ? _originType : null,
+      sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
+      imageEmoji: _selectedEmoji,
+      customImagePath: _customImagePath,
+      sku: _skuCtrl.text.trim(),
+      barcode: _barcodeCtrl.text.trim().isNotEmpty ? _barcodeCtrl.text.trim() : null,
+    );
+
+    // Save to catalog & initialize branch stocks
+    final ok = await ref.read(catalogProvider.notifier).addProduct(
+      newProduct,
+      stockBranchA: stockA,
+      stockBranchB: stockB,
+    );
+
+    if (!ok || !mounted) return;
+    Navigator.of(context).pop();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            ProductAvatar(
+              imageEmoji: _selectedEmoji,
+              customImagePath: _customImagePath,
+              size: 24,
+              fontSize: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Successfully added "${newProduct.name}" to inventory!'),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.success,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFmt = NumberFormat('#,###');
+    final sale = double.tryParse(_salePriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
+    final cost = double.tryParse(_costPriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
+    final marginVal = sale - cost;
+    final marginPct = sale > 0 ? ((marginVal / sale) * 100) : 0.0;
+
+    return Dialog(
+      backgroundColor: AppColors.surface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: 780,
+        constraints: const BoxConstraints(maxHeight: 740),
+        child: Column(
+          children: [
+            // ── Dialog Header ───────────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                border: Border(bottom: BorderSide(color: AppColors.border)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      widget.isEditing ? Icons.edit_note_rounded : Icons.add_business_rounded,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.isEditing
+                              ? 'Edit Product (ကုန်ပစ္စည်း အချက်အလက် ပြင်ဆင်ခြင်း)'
+                              : 'Add New Product',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          widget.isEditing
+                              ? 'အမည်၊ အမျိုးအစား၊ ရောင်းဈေး၊ အရင်းဈေးနှင့် လက်ကျန်များ ပြင်ဆင်မည်'
+                              : 'ပစ္စည်းအသစ် ထည့်သွင်းခြင်း (POS & Inventory သို့ တိုက်ရိုက်ထည့်မည်)',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: AppColors.textMuted),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Scrollable Form Body ────────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Category Selector Chips
+                      Text(
+                        'CATEGORY (အမျိုးအစား)',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Builder(
+                        builder: (context) {
+                          final activeCategories = ref.watch(categoryNotifierProvider);
+                          return Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: activeCategories.map((catItem) {
+                              final selected = _selectedCategoryId != null
+                                  ? _selectedCategoryId == catItem.id
+                                  : (catItem.standardCategory != null &&
+                                      catItem.standardCategory == _category);
+                              final label = catItem.englishName.isNotEmpty &&
+                                      catItem.englishName.toLowerCase() !=
+                                          catItem.name.toLowerCase()
+                                  ? '${catItem.emoji} ${catItem.englishName} (${catItem.name})'
+                                  : '${catItem.emoji} ${catItem.name}';
+                              return ChoiceChip(
+                                label: Text(
+                                  label,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: selected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: selected
+                                        ? AppColors.textOnPrimary
+                                        : AppColors.textSecondary,
+                                  ),
+                                ),
+                                selected: selected,
+                                selectedColor: AppColors.primary,
+                                backgroundColor: AppColors.surfaceVariant,
+                                onSelected: (_) =>
+                                    _onCategoryItemSelected(catItem),
+                              );
+                            }).toList(),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // Product Name & Emoji/Custom Image Selection Row
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Product Avatar (Emoji or Custom Image)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ICON / IMAGE',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Tooltip(
+                                    message: _customImagePath != null
+                                        ? 'Tap to change image'
+                                        : 'Tap to pick image from gallery',
+                                    child: InkWell(
+                                      onTap: _pickImageFromGallery,
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Container(
+                                        width: 56,
+                                        height: 56,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surfaceVariant,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: _customImagePath != null
+                                                ? AppColors.primary
+                                                : AppColors.border,
+                                            width: _customImagePath != null ? 1.5 : 1,
+                                          ),
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(11),
+                                          child: ProductAvatar(
+                                            imageEmoji: _selectedEmoji,
+                                            customImagePath: _customImagePath,
+                                            size: 56,
+                                            fontSize: 28,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  if (_customImagePath != null)
+                                    Positioned(
+                                      top: -4,
+                                      right: -4,
+                                      child: Tooltip(
+                                        message: 'Remove photo (use icon)',
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _customImagePath = null;
+                                            });
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.all(3),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.error,
+                                              shape: BoxShape.circle,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.3),
+                                                  blurRadius: 4,
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Icon(
+                                              Icons.close_rounded,
+                                              size: 12,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 14),
+
+                          // Product Name Field
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'PRODUCT NAME (ပစ္စည်းအမည်) *',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _nameCtrl,
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'e.g. Monstera Deliciosa (မွန်းစတာရာ)',
+                                    hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                                    filled: true,
+                                    fillColor: AppColors.surfaceVariant,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide(color: AppColors.border),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  ),
+                                  validator: (v) {
+                                    if (v == null || v.trim().isEmpty) {
+                                      return 'Please enter a product name';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // Quick Emoji Picker & Custom Image Picker Row
+                      Row(
+                        children: [
+                          Text(
+                            'Quick Icon:',
+                            style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: (_categoryEmojis[_category] ?? []).map((emoji) {
+                                  final isSel = _customImagePath == null && _selectedEmoji == emoji;
+                                  return InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedEmoji = emoji;
+                                        _customImagePath = null;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Container(
+                                      margin: const EdgeInsets.only(right: 6),
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: isSel ? AppColors.primary.withValues(alpha: 0.25) : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: isSel ? AppColors.primary : Colors.transparent,
+                                        ),
+                                      ),
+                                      child: Text(emoji, style: const TextStyle(fontSize: 18)),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Gallery Pick Button
+                          OutlinedButton.icon(
+                            onPressed: _pickImageFromGallery,
+                            icon: Icon(
+                              _customImagePath != null ? Icons.photo_library_rounded : Icons.add_photo_alternate_outlined,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            label: Text(
+                              _customImagePath != null ? 'Change Photo' : 'Gallery Photo (ဓာတ်ပုံ)',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: _customImagePath != null
+                                    ? AppColors.primary
+                                    : AppColors.primary.withValues(alpha: 0.5),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              backgroundColor: _customImagePath != null
+                                  ? AppColors.primary.withValues(alpha: 0.1)
+                                  : Colors.transparent,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // Dynamic Fields (Origin & Subcategory)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Origin Selector (Plants only)
+                          if (_category == ProductCategory.plants) ...[
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'PLANT ORIGIN (မူရင်းဒေသ)',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surfaceVariant,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: AppColors.border),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<OriginType>(
+                                        value: _originType,
+                                        isExpanded: true,
+                                        dropdownColor: AppColors.surfaceVariant,
+                                        items: const [
+                                          DropdownMenuItem(
+                                            value: OriginType.thaiImport,
+                                            child: Text('ယိုးဒယား Import'),
+                                          ),
+                                          DropdownMenuItem(
+                                            value: OriginType.chinaImport,
+                                            child: Text('တရုတ် Import'),
+                                          ),
+                                          DropdownMenuItem(
+                                            value: OriginType.local,
+                                            child: Text('ပြည်တွင်း'),
+                                          ),
+                                        ],
+                                        onChanged: (v) {
+                                          if (v != null) setState(() => _originType = v);
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+
+                          // Subcategory Selector
+                          Expanded(
+                            flex: 4,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'SUBCATEGORY (အုပ်စုခွဲ)',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Builder(
+                                  builder: (context) {
+                                    final currentSubs = _getSubcategories(_category);
+                                    final activeSub = currentSubs.contains(_subcategory)
+                                        ? _subcategory
+                                        : (currentSubs.isNotEmpty ? currentSubs.first : null);
+
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceVariant,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: AppColors.border),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: activeSub,
+                                          isExpanded: true,
+                                          dropdownColor: AppColors.surfaceVariant,
+                                          items: currentSubs.map((s) {
+                                            return DropdownMenuItem(value: s, child: Text(s));
+                                          }).toList(),
+                                          onChanged: (v) {
+                                            if (v != null) setState(() => _subcategory = v);
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(width: 12),
+
+                          // Size Label (optional)
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'SIZE / SPEC (အရွယ်အစား)',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _sizeLabelCtrl,
+                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                                  decoration: InputDecoration(
+                                    hintText: 'e.g. 6 inch / 500ml',
+                                    hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                                    filled: true,
+                                    fillColor: AppColors.surfaceVariant,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide(color: AppColors.border),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // ── Pricing & Margins ─────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'PRICING & PROFIT MARGIN (ဈေးနှုန်းနှင့် အမြတ်ငွေ)',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                if (sale > 0 && cost > 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: marginPct >= 30
+                                          ? AppColors.success.withValues(alpha: 0.2)
+                                          : AppColors.warning.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Margin: ${marginPct.toStringAsFixed(1)}% (+${currencyFmt.format(marginVal)} Ks)',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: marginPct >= 30 ? AppColors.success : AppColors.warning,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                // Sale Price
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Sale Price (ရောင်းဈေး MMK) *',
+                                        style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      TextFormField(
+                                        controller: _salePriceCtrl,
+                                        keyboardType: TextInputType.number,
+                                        onChanged: (_) => setState(() {}),
+                                        style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                                        decoration: InputDecoration(
+                                          hintText: 'e.g. 25,000',
+                                          hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                                          suffixText: 'Ks',
+                                          filled: true,
+                                          fillColor: AppColors.surface,
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide(color: AppColors.border),
+                                          ),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        ),
+                                        validator: (v) {
+                                          if (v == null || v.trim().isEmpty) return 'Enter sale price';
+                                          if (double.tryParse(v.replaceAll(',', '')) == null) return 'Invalid price';
+                                          return null;
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+
+                                // Cost Price
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Cost Price (အရင်းဈေး MMK) *',
+                                        style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      TextFormField(
+                                        controller: _costPriceCtrl,
+                                        keyboardType: TextInputType.number,
+                                        onChanged: (_) => setState(() {}),
+                                        style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                                        decoration: InputDecoration(
+                                          hintText: 'e.g. 15,000',
+                                          hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                                          suffixText: 'Ks',
+                                          filled: true,
+                                          fillColor: AppColors.surface,
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide(color: AppColors.border),
+                                          ),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        ),
+                                        validator: (v) {
+                                          if (v == null || v.trim().isEmpty) return 'Enter cost price';
+                                          if (double.tryParse(v.replaceAll(',', '')) == null) return 'Invalid cost';
+                                          return null;
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // ── SKU & Barcode Row ─────────────────────────────
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'SKU CODE',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _skuCtrl,
+                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                                  decoration: InputDecoration(
+                                    hintText: 'e.g. PLT-015',
+                                    filled: true,
+                                    fillColor: AppColors.surfaceVariant,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: AppColors.border),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'BARCODE (ဘားကုဒ်)',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: _barcodeCtrl,
+                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                                  decoration: InputDecoration(
+                                    hintText: 'e.g. 885000100015',
+                                    filled: true,
+                                    fillColor: AppColors.surfaceVariant,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: AppColors.border),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      // ── Initial Stock Setup ───────────────────────────
+                      Text(
+                        widget.isEditing
+                            ? 'STOCK QUANTITY (လက်ကျန်အရေအတွက် ပြင်ဆင်ခြင်း)'
+                            : 'INITIAL STOCK ALLOCATION (ဆိုင်ခွဲအလိုက် စတင်လက်ကျန်)',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Branch A Stock:', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                                const SizedBox(height: 4),
+                                TextFormField(
+                                  controller: _stockACtrl,
+                                  keyboardType: TextInputType.number,
+                                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(Icons.store_rounded, size: 16, color: AppColors.primary),
+                                    filled: true,
+                                    fillColor: AppColors.surfaceVariant,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Branch B Stock:', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                                const SizedBox(height: 4),
+                                TextFormField(
+                                  controller: _stockBCtrl,
+                                  keyboardType: TextInputType.number,
+                                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(Icons.storefront_rounded, size: 16, color: AppColors.primaryLight),
+                                    filled: true,
+                                    fillColor: AppColors.surfaceVariant,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Min Alert Stock:', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                                const SizedBox(height: 4),
+                                TextFormField(
+                                  controller: _minStockCtrl,
+                                  keyboardType: TextInputType.number,
+                                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.warning),
+                                    filled: true,
+                                    fillColor: AppColors.surfaceVariant,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Dialog Actions Footer ───────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text('Cancel (ပယ်ဖျက်မည်)', style: TextStyle(color: AppColors.textMuted)),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: _saveProduct,
+                    icon: const Icon(Icons.check_circle_rounded, size: 18),
+                    label: Text(
+                      widget.isEditing
+                          ? 'Update Product (အချက်အလက် ပြင်ဆင်မည်)'
+                          : 'Save & Add to Catalog (သိမ်းဆည်းမည်)',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.textOnPrimary,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
