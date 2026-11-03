@@ -47,7 +47,7 @@ class SitePyoeApp extends ConsumerWidget {
     return MaterialApp(
       key: ValueKey(themeMode),
       scaffoldMessengerKey: rootScaffoldMessengerKey,
-      title: 'SitePyoe POS',
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

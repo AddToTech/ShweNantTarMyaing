@@ -9,7 +9,7 @@ class AppConstants {
   AppConstants._();
 
   // ── App Info ────────────────────────────────────────────
-  static const String appName    = 'SitePyoe POS';
+  static const String appName    = 'ရွှေနံ့သာမြိုင်';
   static const String appVersion = '1.4.0';
 
   // ── API ─────────────────────────────────────────────────

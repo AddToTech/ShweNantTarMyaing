@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../data/models/app_user.dart';
 import '../../../shared/dialogs/server_connection_dialog.dart';
 import '../view_models/auth_notifier.dart';
 
@@ -14,8 +13,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _emailCtrl = TextEditingController(text: 'admin@sitepyoe.com');
-  final _passwordCtrl = TextEditingController(text: 'password123');
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
   bool _obscurePassword = true;
   final _formKey = GlobalKey<FormState>();
 
@@ -32,15 +31,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _emailCtrl.text.trim(),
       _passwordCtrl.text.trim(),
     );
-  }
-
-  void _autofillUser(AppUser user) {
-    setState(() {
-      _emailCtrl.text = user.email;
-      _passwordCtrl.text = user.password.isNotEmpty
-          ? user.password
-          : (_passwordCtrl.text.isNotEmpty ? _passwordCtrl.text : 'password123');
-    });
   }
 
   @override
@@ -98,10 +88,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'SitePyoe',
+                            'ရွှေနံ့သာမြိုင်',
                             style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontSize: 28,
+                              fontSize: 26,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0.5,
                             ),
@@ -168,7 +158,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const Icon(Icons.tablet_android_rounded, size: 16, color: AppColors.primary),
                         const SizedBox(width: 8),
                         Text(
-                          'Tablet Kiosk Terminal #01  •  SitePyoe v${AppConstants.appVersion}',
+                          'Tablet Kiosk Terminal #01  •  ရွှေနံ့သာမြိုင် v${AppConstants.appVersion}',
                           style: TextStyle(color: AppColors.textMuted, fontSize: 11),
                         ),
                       ],
@@ -283,58 +273,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                         const SizedBox(height: 24),
 
-                        // Quick demo accounts
-                        Text(
-                          'QUICK SELECT DEMO ACCOUNT (စမ်းသပ်ရန် အကောင့်ရွေးရန်)',
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: authState.users.map((u) {
-                            final isSelected = _emailCtrl.text.trim().toLowerCase() == u.email.toLowerCase();
-                            return InkWell(
-                              onTap: () => _autofillUser(u),
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? AppColors.primary.withValues(alpha: 0.18)
-                                      : AppColors.surfaceVariant,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isSelected ? AppColors.primary : AppColors.border,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(u.role.icon, style: const TextStyle(fontSize: 12)),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '${u.name} (${u.role.label.split(' ').first})',
-                                      style: TextStyle(
-                                        color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                                        fontSize: 11,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-
-                        const SizedBox(height: 24),
-
                         // Error Banner
                         if (authState.errorMessage != null) ...[
                           Container(
@@ -370,7 +308,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           controller: _emailCtrl,
                           style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                           decoration: InputDecoration(
-                            hintText: 'admin@sitepyoe.com or admin',
+                            hintText: 'အီးမေးလ် သို့မဟုတ် အကောင့်အမည် ထည့်ပါ',
                             hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
                             prefixIcon: Icon(Icons.person_outline_rounded, color: AppColors.textMuted, size: 20),
                             filled: true,
