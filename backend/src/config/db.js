@@ -13,10 +13,16 @@ const { Pool } = pg;
 
 const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/sitepyoe';
 const isProduction = process.env.NODE_ENV === 'production';
+const isInternalHost =
+  dbUrl.includes('localhost') ||
+  dbUrl.includes('127.0.0.1') ||
+  dbUrl.includes('@postgres:') ||
+  dbUrl.includes('@postgres/');
+
 const requiresSsl =
   dbUrl.includes('sslmode=require') ||
   process.env.PGSSLMODE === 'require' ||
-  (isProduction && !dbUrl.includes('localhost') && !dbUrl.includes('127.0.0.1'));
+  (isProduction && !isInternalHost);
 
 export const pool = new Pool({
   connectionString: dbUrl,
