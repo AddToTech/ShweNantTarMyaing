@@ -7,44 +7,79 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../db/drift/app_database.dart';
 import '../network/api_client.dart';
+import '../utils/app_toast.dart';
+
+final syncPendingCountProvider = StateProvider<int>((ref) => 0);
 
 final syncServiceProvider = Provider<SyncService>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   final db = ref.watch(appDatabaseProvider);
-  return SyncService(apiClient: apiClient, db: db);
+  return SyncService(apiClient: apiClient, db: db, ref: ref);
 });
 
 class SyncService {
   final ApiClient _apiClient;
   final AppDatabase _db;
+  final Ref _ref;
   Timer? _timer;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   bool _isSyncing = false;
 
   SyncService({
     required ApiClient apiClient,
     required AppDatabase db,
+    required Ref ref,
   })  : _apiClient = apiClient,
-        _db = db;
+        _db = db,
+        _ref = ref;
 
-  /// Start periodic sync (every 5 minutes)
-  void startPeriodicSync({Duration interval = const Duration(minutes: 5)}) {
+  /// Start periodic sync and listen for internet reconnection
+  void startPeriodicSync({Duration interval = const Duration(minutes: 3)}) {
     _timer?.cancel();
     _timer = Timer.periodic(interval, (_) => syncPendingQueue());
+
+    _connectivitySub?.cancel();
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      final isConnected = !results.contains(ConnectivityResult.none);
+      if (isConnected) {
+        debugPrint('[SyncService] 🌐 Internet connectivity detected! Triggering instant sync...');
+        syncPendingQueue(isAutoOnReconnect: true);
+      }
+    });
+
+    // Initial check of pending queue count
+    updatePendingCount();
   }
 
   void stopPeriodicSync() {
     _timer?.cancel();
     _timer = null;
+    _connectivitySub?.cancel();
+    _connectivitySub = null;
+  }
+
+  /// Refreshes the pending sales count in Riverpod
+  Future<int> updatePendingCount() async {
+    try {
+      final sales = await _db.getUnsyncedSales();
+      final wastage = await _db.getUnsyncedWastageLogs();
+      final count = sales.length + wastage.length;
+      _ref.read(syncPendingCountProvider.notifier).state = count;
+      return count;
+    } catch (_) {
+      return 0;
+    }
   }
 
   /// Push all queued offline sales and wastage to backend
-  Future<bool> syncPendingQueue() async {
+  Future<bool> syncPendingQueue({bool isAutoOnReconnect = false}) async {
     if (_isSyncing) return false;
 
     // Check connectivity first
     try {
       final connectivityResult = await Connectivity().checkConnectivity();
       if (connectivityResult.contains(ConnectivityResult.none)) {
+        await updatePendingCount();
         return false;
       }
     } catch (_) {}
@@ -55,6 +90,7 @@ class SyncService {
       final unsyncedWastage = await _db.getUnsyncedWastageLogs();
 
       if (unsyncedSales.isEmpty && unsyncedWastage.isEmpty) {
+        _ref.read(syncPendingCountProvider.notifier).state = 0;
         _isSyncing = false;
         return true;
       }
@@ -86,6 +122,7 @@ class SyncService {
           'sales': salesPayload,
           'wastageLogs': wastagePayload,
         },
+        suppressErrorToast: true,
       );
 
       if (response is Map<String, dynamic>) {
@@ -104,6 +141,14 @@ class SyncService {
           }
         }
 
+        await updatePendingCount();
+
+        if (syncedSales.isNotEmpty || syncedWastage.isNotEmpty) {
+          AppToast.showSuccess(
+            '📡 အင်တာနက် ပြန်လည်ရရှိပါသဖြင့် အော့ဖ်လိုင်း အရောင်းဘောက်ချာ (${syncedSales.length}) စောင်နှင့် အလေအလွင့် (${syncedWastage.length}) ခုကို Server သို့ အောင်မြင်စွာ Update ပြုလုပ်ပြီးပါပြီ',
+          );
+        }
+
         debugPrint('[SyncService] Successfully synced ${syncedSales.length} sales & ${syncedWastage.length} wastage records');
         _isSyncing = false;
         return true;
@@ -112,6 +157,7 @@ class SyncService {
       debugPrint('[SyncService] Background sync error: $e');
     } finally {
       _isSyncing = false;
+      await updatePendingCount();
     }
 
     return false;

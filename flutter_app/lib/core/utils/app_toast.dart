@@ -87,6 +87,33 @@ class AppToast {
     );
   }
 
+  /// Displays an informational toast (e.g. for background sync, offline events).
+  static void showInfo(String message) {
+    _dispatchSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   /// Displays an amber warning toast.
   static void showWarning(String message) {
     _dispatchSnackBar(

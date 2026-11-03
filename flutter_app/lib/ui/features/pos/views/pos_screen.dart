@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/sync_service.dart';
+import '../../../../core/utils/app_toast.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../data/mock/mock_products.dart';
 import '../../../../data/repositories/branch_repository.dart';
@@ -657,6 +659,7 @@ class _TopBarState extends ConsumerState<_TopBar> {
   @override
   Widget build(BuildContext context) {
     final heldOrders = ref.watch(cartProvider).heldOrders;
+    final pendingSyncCount = ref.watch(syncPendingCountProvider);
 
     return Container(
       height: 58,
@@ -734,6 +737,69 @@ class _TopBarState extends ConsumerState<_TopBar> {
           _BranchBadge(
             selectedBranchId: widget.selectedBranchId,
             onChanged: widget.onBranchChange,
+          ),
+
+          const SizedBox(width: 8),
+
+          // Cloud Sync & Connection indicator
+          Tooltip(
+            message: pendingSyncCount > 0
+                ? 'အင်တာနက်ပြတ်တောက်စဉ် ရောင်းချထားသော စာရင်း $pendingSyncCount ခုရှိပါသည် (နှိပ်၍ Cloud ပေါ်သို့ တင်ပါ)'
+                : 'Cloud Server နှင့် ချိတ်ဆက်မှု အဆင်ပြေပါသည် (စနစ်အားလုံး Update ဖြစ်နေပါသည်)',
+            child: InkWell(
+              onTap: () async {
+                final count = await ref.read(syncServiceProvider).updatePendingCount();
+                if (count > 0) {
+                  AppToast.showInfo('Cloud Server သို့ စာရင်းများ ပေးပို့နေပါသည်...');
+                  await ref.read(syncServiceProvider).syncPendingQueue();
+                } else {
+                  AppToast.showSuccess('အချက်အလက်အားလုံး Cloud ပေါ်တွင် မွမ်းမံပြီးပါပြီ');
+                }
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: pendingSyncCount > 0
+                      ? AppColors.warning.withValues(alpha: 0.15)
+                      : AppColors.success.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: pendingSyncCount > 0
+                        ? AppColors.warning.withValues(alpha: 0.4)
+                        : AppColors.success.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      pendingSyncCount > 0
+                          ? Icons.cloud_upload_outlined
+                          : Icons.cloud_done_rounded,
+                      size: 16,
+                      color: pendingSyncCount > 0
+                          ? AppColors.warning
+                          : AppColors.success,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      pendingSyncCount > 0
+                          ? 'Sync ($pendingSyncCount)'
+                          : 'Online',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: pendingSyncCount > 0
+                            ? AppColors.warning
+                            : AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
 
           const SizedBox(width: 8),

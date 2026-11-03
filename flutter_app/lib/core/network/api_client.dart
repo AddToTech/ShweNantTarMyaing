@@ -290,6 +290,7 @@ class ApiClient {
     dynamic body,
     Map<String, dynamic>? queryParams,
     Map<String, String>? headers,
+    bool suppressErrorToast = false,
   }) {
     return _executeRequest(
       method: 'POST',
@@ -297,6 +298,7 @@ class ApiClient {
       body: body,
       queryParams: queryParams,
       headers: headers,
+      suppressErrorToast: suppressErrorToast,
     );
   }
 
@@ -306,6 +308,7 @@ class ApiClient {
     dynamic body,
     Map<String, dynamic>? queryParams,
     Map<String, String>? headers,
+    bool suppressErrorToast = false,
   }) {
     return _executeRequest(
       method: 'PATCH',
@@ -313,6 +316,7 @@ class ApiClient {
       body: body,
       queryParams: queryParams,
       headers: headers,
+      suppressErrorToast: suppressErrorToast,
     );
   }
 
@@ -321,12 +325,14 @@ class ApiClient {
     String endpoint, {
     Map<String, dynamic>? queryParams,
     Map<String, String>? headers,
+    bool suppressErrorToast = false,
   }) {
     return _executeRequest(
       method: 'DELETE',
       endpoint: endpoint,
       queryParams: queryParams,
       headers: headers,
+      suppressErrorToast: suppressErrorToast,
     );
   }
 

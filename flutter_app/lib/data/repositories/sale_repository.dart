@@ -2,10 +2,12 @@
 
 import 'dart:convert';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/db/drift/app_database.dart';
 import '../../core/network/api_client.dart';
+import '../../core/utils/app_toast.dart';
 import '../../domain/models/sale_transaction.dart';
 import '../mock/mock_products.dart';
 
@@ -151,15 +153,20 @@ class SaleRepository {
     };
 
     try {
-      final res = await _apiClient.post('/sales', body: payload);
+      final res = await _apiClient.post(
+        '/sales',
+        body: payload,
+        suppressErrorToast: true,
+      );
       if (res is Map<String, dynamic>) {
         final serverSale = _saleFromMap(res);
         return serverSale;
       }
     } catch (e) {
-      // Queue into PendingSales for automatic background sync, then rethrow so UI knows API failed
+      // Offline fallback: Queue into PendingSales for automatic background sync
+      debugPrint('[SaleRepository] 📡 Offline: Queuing sale $clientUuid into SQLite pending queue...');
       await _queueOfflineSale(clientUuid, branchId, cashierId ?? 'local_cashier', payload, now);
-      rethrow;
+      AppToast.showInfo('📡 အင်တာနက်မရှိပါ - အရောင်းမှတ်တမ်းကို စက်တွင်း၌ သိမ်းဆည်းပြီးပါပြီ (အင်တာနက်ပြန်ရပါက Server သို့ အလိုအလျောက် ပေးပို့မည်)');
     }
 
     // Return locally generated sale for instant UI & receipt printing

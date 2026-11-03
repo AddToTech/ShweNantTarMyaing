@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/db/drift/app_database.dart';
 import '../../core/network/api_client.dart';
+import '../../core/utils/app_toast.dart';
 import '../../ui/features/wastage/view_models/wastage_notifier.dart';
 import '../mock/mock_products.dart';
 
@@ -121,12 +122,16 @@ class WastageRepository {
     };
 
     try {
-      final res = await _apiClient.post('/wastage', body: payload);
+      final res = await _apiClient.post(
+        '/wastage',
+        body: payload,
+        suppressErrorToast: true,
+      );
       if (res is Map<String, dynamic>) {
         return _entryFromMap(res);
       }
     } catch (e) {
-      // Queue in Drift pendingWastageLogs for background retry, then rethrow so UI knows API failed
+      // Queue in Drift pendingWastageLogs for background sync
       try {
         await _db.into(_db.pendingWastageLogs).insert(
           PendingWastageLogsCompanion.insert(
@@ -137,7 +142,7 @@ class WastageRepository {
           ),
         );
       } catch (_) {}
-      rethrow;
+      AppToast.showInfo('📡 အော့ဖ်လိုင်းစနစ်ဖြင့် အလေအလွင့်စာရင်း မှတ်တမ်းတင်ထားပါသည် (အင်တာနက်ပြန်ရပါက အလိုအလျောက် ပေးပို့မည်)');
     }
 
     return WastageEntry(
