@@ -98,7 +98,8 @@ class InventoryNotifier extends Notifier<InventoryState> {
   Future<void> loadBranchStock(String branchId) async {
     try {
       final client = ref.read(apiClientProvider);
-      final data = await client.get('/products', queryParams: {'branchId': branchId});
+      final actualBranchId = kBranchKeyToUuid[branchId] ?? branchId;
+      final data = await client.get('/products', queryParams: {'branchId': actualBranchId});
       if (data is List && data.isNotEmpty) {
         final next = Map<String, int>.from(state.stocks);
         for (final item in data) {

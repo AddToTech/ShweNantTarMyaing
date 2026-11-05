@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../config/db.js';
+import { query, resolveBranchId } from '../config/db.js';
 import { authenticate, requireRole } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -11,6 +11,7 @@ router.use('/reports', authenticate, requireRole('owner', 'manager'));
 router.get('/reports/sales-summary', async (req, res, next) => {
   try {
     const { branchId, startDate, endDate } = req.query;
+    const targetBranchId = await resolveBranchId(branchId);
 
     let sql = `
       SELECT 
@@ -29,8 +30,8 @@ router.get('/reports/sales-summary', async (req, res, next) => {
 
     const params = [];
 
-    if (branchId) {
-      params.push(branchId);
+    if (targetBranchId) {
+      params.push(targetBranchId);
       sql += ` AND branch_id = $${params.length}`;
     }
 
@@ -57,8 +58,8 @@ router.get('/reports/sales-summary', async (req, res, next) => {
     `;
     const topProdParams = [];
 
-    if (branchId) {
-      topProdParams.push(branchId);
+    if (targetBranchId) {
+      topProdParams.push(targetBranchId);
       topProdSql += ` AND s.branch_id = $${topProdParams.length}`;
     }
     if (startDate) {
@@ -89,6 +90,7 @@ router.get('/reports/sales-summary', async (req, res, next) => {
 router.get('/reports/purchases', async (req, res, next) => {
   try {
     const { branchId, vendorId, startDate, endDate } = req.query;
+    const targetBranchId = await resolveBranchId(branchId);
 
     let sql = `
       SELECT 
@@ -104,8 +106,8 @@ router.get('/reports/purchases', async (req, res, next) => {
 
     const params = [];
 
-    if (branchId) {
-      params.push(branchId);
+    if (targetBranchId) {
+      params.push(targetBranchId);
       sql += ` AND p.branch_id = $${params.length}`;
     }
 
@@ -138,8 +140,8 @@ router.get('/reports/purchases', async (req, res, next) => {
       WHERE 1=1
     `;
     const vendorParams = [];
-    if (branchId) {
-      vendorParams.push(branchId);
+    if (targetBranchId) {
+      vendorParams.push(targetBranchId);
       vendorBreakdownSql += ` AND p.branch_id = $${vendorParams.length}`;
     }
     if (startDate) {
@@ -169,6 +171,7 @@ router.get('/reports/purchases', async (req, res, next) => {
 router.get('/reports/expenses', async (req, res, next) => {
   try {
     const { branchId, startDate, endDate, period } = req.query;
+    const targetBranchId = await resolveBranchId(branchId);
 
     // 1. Payroll expenses
     let payrollSql = `
@@ -182,8 +185,8 @@ router.get('/reports/expenses', async (req, res, next) => {
       WHERE 1=1
     `;
     const payrollParams = [];
-    if (branchId) {
-      payrollParams.push(branchId);
+    if (targetBranchId) {
+      payrollParams.push(targetBranchId);
       payrollSql += ` AND branch_id = $${payrollParams.length}`;
     }
     if (period) {
@@ -210,8 +213,8 @@ router.get('/reports/expenses', async (req, res, next) => {
       WHERE 1=1
     `;
     const wastageParams = [];
-    if (branchId) {
-      wastageParams.push(branchId);
+    if (targetBranchId) {
+      wastageParams.push(targetBranchId);
       wastageSql += ` AND branch_id = $${wastageParams.length}`;
     }
     if (startDate) {

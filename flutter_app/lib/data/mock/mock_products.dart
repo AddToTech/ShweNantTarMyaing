@@ -291,6 +291,12 @@ String normalizeBranchId(String? rawId, {String? branchName}) {
   return rawId;
 }
 
+/// Returns the backend database UUID for a given branchKey ('branch_a', 'branch_b' or direct UUID).
+String resolveBranchUuid(String? branchKeyOrId) {
+  if (branchKeyOrId == null || branchKeyOrId.isEmpty) return '';
+  return kBranchKeyToUuid[branchKeyOrId] ?? branchKeyOrId;
+}
+
 /// Updates [kBranches] in-place from backend `/branches` records.
 void updateDynamicBranchesFromApi(List<Map<String, dynamic>> rawBranches) {
   if (rawBranches.isEmpty) return;
@@ -315,8 +321,10 @@ void updateDynamicBranchesFromApi(List<Map<String, dynamic>> rawBranches) {
 
     updated[key] = label;
     if (id.isNotEmpty) {
+      updated[id] = label;
       kBranchUuidToKey[id] = key;
       kBranchKeyToUuid[key] = id;
+      kBranchKeyToUuid[id] = id;
     }
   }
   kBranches = updated;

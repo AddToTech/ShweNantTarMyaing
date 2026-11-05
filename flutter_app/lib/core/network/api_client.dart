@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import '../../data/mock/mock_products.dart';
 import '../constants/app_constants.dart';
 import '../services/auth_service.dart';
 import '../utils/app_toast.dart';
@@ -38,7 +39,13 @@ class ApiClient {
     final sanitizedParams = <String, String>{};
     queryParams.forEach((key, value) {
       if (value != null) {
-        sanitizedParams[key] = value.toString();
+        var strVal = value.toString();
+        // Automatically translate local branch keys ('branch_a', 'branch_b') to backend UUIDs
+        if ((key == 'branchId' || key == 'fromBranchId' || key == 'toBranchId') &&
+            kBranchKeyToUuid.containsKey(strVal)) {
+          strVal = kBranchKeyToUuid[strVal]!;
+        }
+        sanitizedParams[key] = strVal;
       }
     });
 
@@ -87,15 +94,33 @@ class ApiClient {
     bool suppressErrorToast = false,
   }) async {
     await _authService.ensureValidToken();
+
+    // Auto-map branch keys ('branch_a', 'branch_b') in request body
+    dynamic processedBody = body;
+    if (body is Map) {
+      final mapBody = Map<String, dynamic>.from(body);
+      bool modified = false;
+      for (final bKey in ['branchId', 'fromBranchId', 'toBranchId', 'branch_id', 'from_branch_id', 'to_branch_id']) {
+        if (mapBody.containsKey(bKey) && mapBody[bKey] is String) {
+          final mapped = kBranchKeyToUuid[mapBody[bKey]];
+          if (mapped != null && mapped != mapBody[bKey]) {
+            mapBody[bKey] = mapped;
+            modified = true;
+          }
+        }
+      }
+      if (modified) processedBody = mapBody;
+    }
+
     Uri uri = _buildUri(endpoint, queryParams);
     final reqHeaders = _buildHeaders(headers);
     final sw = Stopwatch()..start();
 
-    HttpLogger.logRequest(method: method, uri: uri, headers: reqHeaders, body: body);
+    HttpLogger.logRequest(method: method, uri: uri, headers: reqHeaders, body: processedBody);
 
     http.Response response;
     try {
-      response = await _dispatchHttp(method, uri, reqHeaders, body);
+      response = await _dispatchHttp(method, uri, reqHeaders, processedBody);
     } catch (e, st) {
       HttpLogger.logError(method: method, uri: uri, error: e, duration: sw.elapsed, stackTrace: st);
 
@@ -105,9 +130,9 @@ class ApiClient {
         if (fallbackUri != null) {
           debugPrint('[ApiClient] 🔄 Retrying $method with fallback host: $fallbackUri');
           final retrySw = Stopwatch()..start();
-          HttpLogger.logRequest(method: method, uri: fallbackUri, headers: reqHeaders, body: body);
+          HttpLogger.logRequest(method: method, uri: fallbackUri, headers: reqHeaders, body: processedBody);
           try {
-            response = await _dispatchHttp(method, fallbackUri, reqHeaders, body);
+            response = await _dispatchHttp(method, fallbackUri, reqHeaders, processedBody);
             // Succeeded with fallback, remember this base URL
             final cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/$endpoint';
             final newBase = fallbackUri.toString().replaceAll(cleanEndpoint, '');

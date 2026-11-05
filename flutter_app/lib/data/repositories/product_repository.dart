@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/db/drift/app_database.dart';
 import '../../core/network/api_client.dart';
 import '../../domain/models/product.dart';
+import '../mock/mock_products.dart' show kBranchKeyToUuid;
 
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -135,7 +136,8 @@ class ProductRepository {
     String? search,
   }) async {
     try {
-      final queryParams = <String, dynamic>{'branchId': branchId};
+      final actualBranchId = kBranchKeyToUuid[branchId] ?? branchId;
+      final queryParams = <String, dynamic>{'branchId': actualBranchId};
       if (categoryId != null && categoryId.isNotEmpty && categoryId != 'all') {
         queryParams['categoryId'] = categoryId;
       }

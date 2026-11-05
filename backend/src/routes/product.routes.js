@@ -303,6 +303,7 @@ router.get('/products/barcode/:barcode', async (req, res, next) => {
   try {
     const { barcode } = req.params;
     const { branchId } = req.query;
+    const targetBranchId = await resolveBranchId(branchId);
 
     const sql = `
       SELECT 
@@ -317,12 +318,12 @@ router.get('/products/barcode/:barcode', async (req, res, next) => {
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
       LEFT JOIN branch_inventories bi ON p.id = bi.product_id ${
-        branchId ? 'AND bi.branch_id = $2' : ''
+        targetBranchId ? 'AND bi.branch_id = $2' : ''
       }
       WHERE p.barcode = $1 AND p.is_active = TRUE
     `;
 
-    const params = branchId ? [barcode, branchId] : [barcode];
+    const params = targetBranchId ? [barcode, targetBranchId] : [barcode];
     const result = await query(sql, params);
 
     if (result.rows.length === 0) {
@@ -340,6 +341,7 @@ router.get('/products/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
     const { branchId } = req.query;
+    const targetBranchId = await resolveBranchId(branchId);
 
     const sql = `
       SELECT 
@@ -352,12 +354,12 @@ router.get('/products/:id', async (req, res, next) => {
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
       LEFT JOIN branch_inventories bi ON p.id = bi.product_id ${
-        branchId ? 'AND bi.branch_id = $2' : ''
+        targetBranchId ? 'AND bi.branch_id = $2' : ''
       }
       WHERE p.id = $1
     `;
 
-    const params = branchId ? [id, branchId] : [id];
+    const params = targetBranchId ? [id, targetBranchId] : [id];
     const result = await query(sql, params);
 
     if (result.rows.length === 0) {
