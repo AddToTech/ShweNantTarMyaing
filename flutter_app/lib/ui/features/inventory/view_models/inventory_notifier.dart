@@ -214,11 +214,24 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
   /// Returns true only if the backend API call succeeds.
   Future<bool> addProduct(
     MockProduct product, {
+    Map<String, int> branchStocks = const {},
     int stockBranchA = 0,
     int stockBranchB = 0,
   }) async {
     try {
       final client = ref.read(apiClientProvider);
+
+      final finalStocks = Map<String, int>.from(branchStocks);
+      if (stockBranchA > 0 && !finalStocks.containsKey('branch_a')) {
+        finalStocks['branch_a'] = stockBranchA;
+      }
+      if (stockBranchB > 0 && !finalStocks.containsKey('branch_b')) {
+        finalStocks['branch_b'] = stockBranchB;
+      }
+
+      final firstBranchId = finalStocks.keys.firstOrNull ?? 'branch_a';
+      final firstStock = finalStocks[firstBranchId] ?? 0;
+
       final created = await client.post('/products', body: {
         'categoryId': product.categoryId ?? product.categoryName ?? product.category.name,
         'subcategory': product.subcategory,
@@ -229,8 +242,9 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
         'salePrice': product.salePrice,
         'originType': product.originType?.name,
         'sizeLabel': product.sizeLabel,
-        'initialStock': stockBranchA,
-        'branchId': 'branch_a',
+        'initialStock': firstStock,
+        'branchId': firstBranchId,
+        'branchStocks': finalStocks,
         'attributes': {
           'imageEmoji': product.imageEmoji,
           if (product.customImagePath != null) 'customImagePath': product.customImagePath,
@@ -241,12 +255,15 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
           ? created['id'].toString()
           : product.sku;
 
-      if (stockBranchB > 0) {
-        await client.post('/inventory/adjust', body: {
-          'branchId': 'branch_b',
-          'productId': createdId,
-          'newQuantity': stockBranchB,
-        });
+      for (final entry in finalStocks.entries) {
+        if (entry.key == firstBranchId) continue;
+        if (entry.value > 0) {
+          await client.post('/inventory/adjust', body: {
+            'branchId': entry.key,
+            'productId': createdId,
+            'newQuantity': entry.value,
+          });
+        }
       }
 
       await loadProducts();
@@ -260,6 +277,7 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
   /// Returns true only if the backend API call succeeds.
   Future<bool> updateProduct(
     MockProduct updated, {
+    Map<String, int> branchStocks = const {},
     int? stockBranchA,
     int? stockBranchB,
   }) async {
@@ -281,20 +299,22 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
         },
       });
 
-      if (stockBranchA != null) {
+      final finalStocks = Map<String, int>.from(branchStocks);
+      if (stockBranchA != null && !finalStocks.containsKey('branch_a')) {
+        finalStocks['branch_a'] = stockBranchA;
+      }
+      if (stockBranchB != null && !finalStocks.containsKey('branch_b')) {
+        finalStocks['branch_b'] = stockBranchB;
+      }
+
+      for (final entry in finalStocks.entries) {
         await client.post('/inventory/adjust', body: {
-          'branchId': 'branch_a',
+          'branchId': entry.key,
           'productId': updated.id,
-          'newQuantity': stockBranchA,
+          'newQuantity': entry.value,
         });
       }
-      if (stockBranchB != null) {
-        await client.post('/inventory/adjust', body: {
-          'branchId': 'branch_b',
-          'productId': updated.id,
-          'newQuantity': stockBranchB,
-        });
-      }
+
       await loadProducts();
       return true;
     } catch (_) {

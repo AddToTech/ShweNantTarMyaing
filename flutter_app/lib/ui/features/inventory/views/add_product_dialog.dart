@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../data/mock/mock_products.dart';
+import '../../../../data/repositories/branch_repository.dart';
 import '../../../shared/widgets/product_avatar.dart';
 import '../../settings/view_models/category_notifier.dart';
 import '../view_models/inventory_notifier.dart';
@@ -52,10 +53,9 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
   final _barcodeCtrl = TextEditingController();
   final _salePriceCtrl = TextEditingController();
   final _costPriceCtrl = TextEditingController();
-  final _stockACtrl = TextEditingController(text: '10');
-  final _stockBCtrl = TextEditingController(text: '5');
   final _minStockCtrl = TextEditingController(text: '5');
   final _sizeLabelCtrl = TextEditingController();
+  final Map<String, TextEditingController> _branchStockCtrls = {};
 
   ProductCategory _category = ProductCategory.plants;
   String? _selectedCategoryId;
@@ -87,8 +87,6 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       _costPriceCtrl.text = p.costPrice == p.costPrice.roundToDouble()
           ? p.costPrice.toInt().toString()
           : p.costPrice.toString();
-      _stockACtrl.text = (widget.initialBranchStockA ?? p.stock).toString();
-      _stockBCtrl.text = (widget.initialBranchStockB ?? 0).toString();
       _minStockCtrl.text = p.minStock.toString();
       _sizeLabelCtrl.text = p.sizeLabel ?? '';
       _category = p.category;
@@ -98,6 +96,13 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       _subcategory = p.subcategory.isNotEmpty ? p.subcategory : 'အထွေထွေ';
       _selectedEmoji = p.imageEmoji;
       _customImagePath = p.customImagePath;
+
+      if (widget.initialBranchStockA != null) {
+        _branchStockCtrls['branch_a'] = TextEditingController(text: widget.initialBranchStockA.toString());
+      }
+      if (widget.initialBranchStockB != null) {
+        _branchStockCtrls['branch_b'] = TextEditingController(text: widget.initialBranchStockB.toString());
+      }
     } else {
       _generateSkuAndBarcode();
     }
@@ -110,10 +115,11 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
     _barcodeCtrl.dispose();
     _salePriceCtrl.dispose();
     _costPriceCtrl.dispose();
-    _stockACtrl.dispose();
-    _stockBCtrl.dispose();
     _minStockCtrl.dispose();
     _sizeLabelCtrl.dispose();
+    for (final c in _branchStockCtrls.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -189,9 +195,14 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
 
     final salePrice = double.tryParse(_salePriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
     final costPrice = double.tryParse(_costPriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
-    final stockA = int.tryParse(_stockACtrl.text.trim()) ?? 0;
-    final stockB = int.tryParse(_stockBCtrl.text.trim()) ?? 0;
     final minStock = int.tryParse(_minStockCtrl.text.trim()) ?? 5;
+
+    final branchStocks = <String, int>{};
+    for (final entry in _branchStockCtrls.entries) {
+      final qty = int.tryParse(entry.value.text.trim()) ?? 0;
+      branchStocks[entry.key] = qty;
+    }
+    final firstStock = branchStocks.values.firstOrNull ?? 0;
 
     if (widget.isEditing) {
       final updatedProduct = widget.productToEdit!.copyWith(
@@ -202,7 +213,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
         subcategory: _subcategory,
         salePrice: salePrice,
         costPrice: costPrice,
-        stock: stockA,
+        stock: firstStock,
         minStock: minStock,
         originType: _category == ProductCategory.plants ? _originType : null,
         sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
@@ -215,8 +226,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
 
       final ok = await ref.read(catalogProvider.notifier).updateProduct(
             updatedProduct,
-            stockBranchA: stockA,
-            stockBranchB: stockB,
+            branchStocks: branchStocks,
           );
 
       if (!ok || !mounted) return;
@@ -256,7 +266,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       subcategory: _subcategory,
       salePrice: salePrice,
       costPrice: costPrice,
-      stock: stockA, // Default display stock reflects Branch A
+      stock: firstStock,
       minStock: minStock,
       originType: _category == ProductCategory.plants ? _originType : null,
       sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
@@ -269,8 +279,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
     // Save to catalog & initialize branch stocks
     final ok = await ref.read(catalogProvider.notifier).addProduct(
       newProduct,
-      stockBranchA: stockA,
-      stockBranchB: stockB,
+      branchStocks: branchStocks,
     );
 
     if (!ok || !mounted) return;
@@ -305,6 +314,25 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
     final cost = double.tryParse(_costPriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
     final marginVal = sale - cost;
     final marginPct = sale > 0 ? ((marginVal / sale) * 100) : 0.0;
+
+    final allBranches = ref.watch(branchListNotifierProvider);
+    final activeBranches = allBranches.where((b) => b.isActive).toList();
+
+    final List<({String id, String name})> branchItems = [];
+    if (activeBranches.isNotEmpty) {
+      for (final b in activeBranches) {
+        branchItems.add((id: b.id, name: b.name));
+      }
+    } else {
+      final addedIds = <String>{};
+      for (final entry in kBranches.entries) {
+        final bId = kBranchKeyToUuid[entry.key] ?? entry.key;
+        if (!addedIds.contains(bId)) {
+          addedIds.add(bId);
+          branchItems.add((id: bId, name: entry.value.split('(').first.trim()));
+        }
+      }
+    }
 
     return Dialog(
       backgroundColor: AppColors.surface,
@@ -1004,7 +1032,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                       // ── Initial Stock Setup ───────────────────────────
                       Text(
                         widget.isEditing
-                            ? 'STOCK QUANTITY (လက်ကျန်အရေအတွက် ပြင်ဆင်ခြင်း)'
+                            ? 'STOCK QUANTITY (ဆိုင်ခွဲအလိုက် လက်ကျန်အရေအတွက် ပြင်ဆင်ခြင်း)'
                             : 'INITIAL STOCK ALLOCATION (ဆိုင်ခွဲအလိုက် စတင်လက်ကျန်)',
                         style: TextStyle(
                           color: AppColors.textSecondary,
@@ -1014,57 +1042,60 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Row(
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Branch A Stock:', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
-                                const SizedBox(height: 4),
-                                TextFormField(
-                                  controller: _stockACtrl,
-                                  keyboardType: TextInputType.number,
-                                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
-                                  decoration: InputDecoration(
-                                    prefixIcon: const Icon(Icons.store_rounded, size: 16, color: AppColors.primary),
-                                    filled: true,
-                                    fillColor: AppColors.surfaceVariant,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          ...branchItems.map((branch) {
+                            final ctrl = _branchStockCtrls.putIfAbsent(
+                              branch.id,
+                              () {
+                                final invStock = widget.isEditing
+                                    ? ref.read(inventoryProvider).getStock(branch.id, widget.productToEdit?.id ?? '')
+                                    : null;
+                                final defaultStock = invStock ?? (branchItems.indexOf(branch) == 0 ? 10 : 5);
+                                return TextEditingController(text: defaultStock.toString());
+                              },
+                            );
+
+                            final displayName = branch.name.length > 22
+                                ? '${branch.name.substring(0, 20)}...'
+                                : branch.name;
+
+                            return SizedBox(
+                              width: 220,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$displayName Stock:',
+                                    style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Branch B Stock:', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
-                                const SizedBox(height: 4),
-                                TextFormField(
-                                  controller: _stockBCtrl,
-                                  keyboardType: TextInputType.number,
-                                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
-                                  decoration: InputDecoration(
-                                    prefixIcon: const Icon(Icons.storefront_rounded, size: 16, color: AppColors.primaryLight),
-                                    filled: true,
-                                    fillColor: AppColors.surfaceVariant,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  const SizedBox(height: 4),
+                                  TextFormField(
+                                    controller: ctrl,
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                                    decoration: InputDecoration(
+                                      prefixIcon: const Icon(Icons.store_rounded, size: 16, color: AppColors.primary),
+                                      filled: true,
+                                      fillColor: AppColors.surfaceVariant,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
+                                ],
+                              ),
+                            );
+                          }),
+                          SizedBox(
+                            width: 220,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Min Alert Stock:', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                                Text('Min Alert Stock:', style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600)),
                                 const SizedBox(height: 4),
                                 TextFormField(
                                   controller: _minStockCtrl,

@@ -394,6 +394,7 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
       initialStock = 0,
       stockBranchA,
       stockBranchB,
+      branchStocks = {},
       branchId,
     } = req.body;
 
@@ -450,11 +451,19 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
     const createdProduct = prodRes.rows[0];
 
     // Auto-create branch_inventories records for all active branches
-    const branchRes = await client.query('SELECT id, name FROM branches WHERE is_active = TRUE ORDER BY name ASC');
+    const branchRes = await client.query('SELECT id, name FROM branches WHERE is_active = TRUE ORDER BY created_at ASC, id ASC');
     for (let i = 0; i < branchRes.rows.length; i++) {
       const b = branchRes.rows[i];
       let stock = 0;
-      if (i === 0 && stockBranchA !== undefined) stock = Number(stockBranchA) || 0;
+      if (branchStocks && typeof branchStocks === 'object') {
+        const val = branchStocks[b.id] ?? branchStocks[b.name] ?? (i === 0 ? branchStocks['branch_a'] : (i === 1 ? branchStocks['branch_b'] : undefined));
+        if (val !== undefined) {
+          stock = Number(val) || 0;
+        } else if (i === 0 && stockBranchA !== undefined) stock = Number(stockBranchA) || 0;
+        else if (i === 1 && stockBranchB !== undefined) stock = Number(stockBranchB) || 0;
+        else if (targetBranchId && b.id === targetBranchId) stock = Number(initialStock) || 0;
+        else if (i === 0) stock = Number(initialStock) || 0;
+      } else if (i === 0 && stockBranchA !== undefined) stock = Number(stockBranchA) || 0;
       else if (i === 1 && stockBranchB !== undefined) stock = Number(stockBranchB) || 0;
       else if (targetBranchId && b.id === targetBranchId) stock = Number(initialStock) || 0;
       else if (i === 0) stock = Number(initialStock) || 0;
