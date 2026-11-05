@@ -10,7 +10,7 @@ class AppConstants {
 
   // ── App Info ────────────────────────────────────────────
   static const String appName    = 'ရွှေနံ့သာမြိုင်';
-  static const String appVersion = '1.4.0';
+  static const String appVersion = '1.5.0';
 
   // ── API ─────────────────────────────────────────────────
   /// Permanent Production Cloud Server URL for ShweNantTarMyaing
