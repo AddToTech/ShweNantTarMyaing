@@ -125,6 +125,16 @@ router.patch('/categories/:id', authenticate, requireRole('owner', 'manager'), a
 router.delete('/categories/:id', authenticate, requireDeletePermission, async (req, res, next) => {
   try {
     const { id } = req.params;
+    const prodCountRes = await query('SELECT COUNT(*) FROM products WHERE category_id = $1', [id]);
+    const prodCount = parseInt(prodCountRes.rows[0].count, 10);
+    if (prodCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `ဤအမျိုးအစားတွင် ပစ္စည်း (${prodCount}) မျိုး ရှိနေသောကြောင့် ဖျက်၍မရသေးပါ။ ပစ္စည်းများကို အခြားအမျိုးအစားသို့ ပြောင်းရွှေ့ခြင်း သို့မဟုတ် အရင်ဖျက်ပေးပါ။`,
+      });
+    }
+    await query('UPDATE products SET subcategory_id = NULL WHERE subcategory_id IN (SELECT id FROM subcategories WHERE category_id = $1)', [id]);
+    await query('DELETE FROM subcategories WHERE category_id = $1', [id]);
     const result = await query('DELETE FROM categories WHERE id = $1 RETURNING *', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Category not found' });
@@ -189,6 +199,8 @@ router.patch('/subcategories/:id', authenticate, requireRole('owner', 'manager')
 router.delete('/subcategories/:id', authenticate, requireDeletePermission, async (req, res, next) => {
   try {
     const { id } = req.params;
+    // Disassociate products from this subcategory first so foreign key constraint is not violated
+    await query('UPDATE products SET subcategory_id = NULL WHERE subcategory_id = $1', [id]);
     const result = await query('DELETE FROM subcategories WHERE id = $1 RETURNING *', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Subcategory not found' });

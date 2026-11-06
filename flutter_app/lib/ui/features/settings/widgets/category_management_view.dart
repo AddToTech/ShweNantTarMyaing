@@ -88,6 +88,13 @@ class _CategoryManagementViewState
                     backgroundColor: AppColors.success,
                   ),
                 );
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('အမျိုးအစား "${category.name}" ကို ဖျက်၍ မအောင်မြင်ပါ'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(
@@ -163,6 +170,13 @@ class _CategoryManagementViewState
                   SnackBar(
                     content: Text('အုပ်စုခွဲ "$subName" ကို ဖယ်ရှားပြီးပါပြီ'),
                     backgroundColor: AppColors.success,
+                  ),
+                );
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('အုပ်စုခွဲ "$subName" ကို ဖယ်ရှား၍ မအောင်မြင်ပါ'),
+                    backgroundColor: AppColors.error,
                   ),
                 );
               }

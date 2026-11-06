@@ -137,6 +137,14 @@ if (process.env.NODE_ENV !== 'test') {
       )
       .catch(() => {});
 
+    // Ensure products.subcategory_id foreign key constraint allows ON DELETE SET NULL
+    await pool
+      .query(
+        `ALTER TABLE products DROP CONSTRAINT IF EXISTS products_subcategory_id_fkey;
+         ALTER TABLE products ADD CONSTRAINT products_subcategory_id_fkey FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE SET NULL;`
+      )
+      .catch((err) => console.error('Migration notice (products_subcategory_id_fkey):', err.message));
+
     // Ensure categories table supports burmese_name and emoji dynamically
     await pool
       .query(

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../data/mock/mock_products.dart';
+import '../../inventory/view_models/inventory_notifier.dart';
 
 // ============================================================
 // Domain / UI Model for Category and Subcategories
@@ -259,6 +260,7 @@ class CategoryNotifier extends Notifier<List<CategoryItem>> {
         'name': cleanNewName,
       });
       await loadCategories();
+      ref.read(catalogProvider.notifier).loadProducts();
       return true;
     } catch (_) {
       return false;
@@ -278,6 +280,7 @@ class CategoryNotifier extends Notifier<List<CategoryItem>> {
       final client = ref.read(apiClientProvider);
       await client.delete('/subcategories/$subId');
       await loadCategories();
+      ref.read(catalogProvider.notifier).loadProducts();
       return true;
     } catch (_) {
       return false;
