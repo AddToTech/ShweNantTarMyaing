@@ -40,6 +40,7 @@ class _AddEditEmployeeDialogState extends ConsumerState<AddEditEmployeeDialog> {
   late String _selectedBranch;
   late DateTime _joinDate;
   late bool _isActive;
+  bool _isSaving = false;
 
   final List<String> _roleOptions = [
     'Manager',
@@ -100,44 +101,50 @@ class _AddEditEmployeeDialogState extends ConsumerState<AddEditEmployeeDialog> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
     final basicSalary = double.tryParse(_salaryCtrl.text.replaceAll(',', '')) ?? 0.0;
     final notifier = ref.read(employeeProvider.notifier);
+    setState(() => _isSaving = true);
 
-    if (widget.employee == null) {
-      // Create new
-      final created = await notifier.addEmployee(
-        branchId: _selectedBranch,
-        name: _nameCtrl.text.trim(),
-        role: _selectedRole,
-        phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
-        address: _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
-        basicSalary: basicSalary,
-        joinDate: _joinDate,
-        isActive: _isActive,
-      );
-      if (created == null || !mounted) return;
-    } else {
-      // Update existing
-      final ok = await notifier.updateEmployee(
-        widget.employee!.copyWith(
+    try {
+      if (widget.employee == null) {
+        // Create new
+        final created = await notifier.addEmployee(
           branchId: _selectedBranch,
           name: _nameCtrl.text.trim(),
           role: _selectedRole,
           phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
-          clearPhone: _phoneCtrl.text.trim().isEmpty,
           address: _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
-          clearAddress: _addressCtrl.text.trim().isEmpty,
           basicSalary: basicSalary,
           joinDate: _joinDate,
           isActive: _isActive,
-        ),
-      );
-      if (!ok || !mounted) return;
-    }
+        );
+        if (created == null || !mounted) return;
+      } else {
+        // Update existing
+        final ok = await notifier.updateEmployee(
+          widget.employee!.copyWith(
+            branchId: _selectedBranch,
+            name: _nameCtrl.text.trim(),
+            role: _selectedRole,
+            phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+            clearPhone: _phoneCtrl.text.trim().isEmpty,
+            address: _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
+            clearAddress: _addressCtrl.text.trim().isEmpty,
+            basicSalary: basicSalary,
+            joinDate: _joinDate,
+            isActive: _isActive,
+          ),
+        );
+        if (!ok || !mounted) return;
+      }
 
-    Navigator.of(context).pop(true);
+      Navigator.of(context).pop(true);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -450,7 +457,7 @@ class _AddEditEmployeeDialogState extends ConsumerState<AddEditEmployeeDialog> {
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
                       child: Text('မလုပ်တော့ပါ (Cancel)',
                           style: TextStyle(color: AppColors.textSecondary)),
                     ),
@@ -462,10 +469,21 @@ class _AddEditEmployeeDialogState extends ConsumerState<AddEditEmployeeDialog> {
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: _save,
-                      icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+                      onPressed: _isSaving ? null : _save,
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check_circle_outline_rounded, size: 18),
                       label: Text(
-                        isEditing ? 'သိမ်းဆည်းမည် (Update)' : 'အသစ်ထည့်မည် (Save)',
+                        _isSaving
+                            ? 'သိမ်းဆည်းနေပါသည်...'
+                            : (isEditing ? 'သိမ်းဆည်းမည် (Update)' : 'အသစ်ထည့်မည် (Save)'),
                         style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textOnPrimary),
                       ),
                     ),

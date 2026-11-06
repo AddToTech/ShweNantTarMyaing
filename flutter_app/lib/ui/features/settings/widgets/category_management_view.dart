@@ -1037,6 +1037,7 @@ class _AddEditCategoryDialogState
   late TextEditingController _englishNameCtrl;
   late TextEditingController _initialSubsCtrl;
   String _selectedEmoji = '🌱';
+  bool _isSaving = false;
 
   static const _emojiPresets = [
     '🌱', '🪴', '🧪', '✂️', '📦', '🌸', '🌳', '🌾', '🍄', '🪨', '🏺', '🏷️'
@@ -1062,36 +1063,42 @@ class _AddEditCategoryDialogState
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
     final isEdit = widget.categoryToEdit != null;
     final notifier = ref.read(categoryNotifierProvider.notifier);
+    setState(() => _isSaving = true);
 
-    bool ok;
-    if (isEdit) {
-      ok = await notifier.updateCategory(
-        id: widget.categoryToEdit!.id,
-        name: _nameCtrl.text.trim(),
-        englishName: _englishNameCtrl.text.trim(),
-        emoji: _selectedEmoji,
-      );
-    } else {
-      final subList = _initialSubsCtrl.text
-          .split(',')
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .toList();
+    try {
+      bool ok;
+      if (isEdit) {
+        ok = await notifier.updateCategory(
+          id: widget.categoryToEdit!.id,
+          name: _nameCtrl.text.trim(),
+          englishName: _englishNameCtrl.text.trim(),
+          emoji: _selectedEmoji,
+        );
+      } else {
+        final subList = _initialSubsCtrl.text
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
 
-      ok = await notifier.addCategory(
-        name: _nameCtrl.text.trim(),
-        englishName: _englishNameCtrl.text.trim(),
-        emoji: _selectedEmoji,
-        subcategories: subList,
-      );
-    }
+        ok = await notifier.addCategory(
+          name: _nameCtrl.text.trim(),
+          englishName: _englishNameCtrl.text.trim(),
+          emoji: _selectedEmoji,
+          subcategories: subList,
+        );
+      }
 
-    if (ok && mounted) {
-      Navigator.of(context).pop();
+      if (ok && mounted) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -1242,20 +1249,29 @@ class _AddEditCategoryDialogState
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
                     child: Text('မလုပ်တော့ပါ',
                         style: TextStyle(color: AppColors.textMuted)),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: _save,
+                    onPressed: _isSaving ? null : _save,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.textOnPrimary,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 18, vertical: 10),
                     ),
-                    child: Text(isEdit ? 'သိမ်းဆည်းမည်' : 'ထည့်သွင်းမည်'),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(isEdit ? 'သိမ်းဆည်းမည်' : 'ထည့်သွင်းမည်'),
                   ),
                 ],
               ),
@@ -1291,6 +1307,7 @@ class _AddEditSubcategoryDialogState
     extends ConsumerState<_AddEditSubcategoryDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _subNameCtrl;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -1306,27 +1323,33 @@ class _AddEditSubcategoryDialogState
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
     final isEdit = widget.oldSubName != null;
     final notifier = ref.read(categoryNotifierProvider.notifier);
+    setState(() => _isSaving = true);
 
-    bool ok;
-    if (isEdit) {
-      ok = await notifier.updateSubcategory(
-        widget.categoryId,
-        widget.oldSubName!,
-        _subNameCtrl.text.trim(),
-      );
-    } else {
-      ok = await notifier.addSubcategory(
-        widget.categoryId,
-        _subNameCtrl.text.trim(),
-      );
+    try {
+      bool ok;
+      if (isEdit) {
+        ok = await notifier.updateSubcategory(
+          widget.categoryId,
+          widget.oldSubName!,
+          _subNameCtrl.text.trim(),
+        );
+      } else {
+        ok = await notifier.addSubcategory(
+          widget.categoryId,
+          _subNameCtrl.text.trim(),
+        );
+      }
+      if (!ok || !mounted) return;
+
+      Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-    if (!ok || !mounted) return;
-
-    Navigator.of(context).pop();
   }
 
   @override
@@ -1415,20 +1438,29 @@ class _AddEditSubcategoryDialogState
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
                     child: Text('မလုပ်တော့ပါ',
                         style: TextStyle(color: AppColors.textMuted)),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: _save,
+                    onPressed: _isSaving ? null : _save,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.textOnPrimary,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 18, vertical: 10),
                     ),
-                    child: Text(isEdit ? 'သိမ်းဆည်းမည်' : 'ထည့်မည်'),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(isEdit ? 'သိမ်းဆည်းမည်' : 'ထည့်မည်'),
                   ),
                 ],
               ),

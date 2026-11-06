@@ -66,6 +66,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
   String? _selectedVendorId;
   String _selectedEmoji = '🪴';
   String? _customImagePath;
+  bool _isSaving = false;
 
   static const Map<ProductCategory, List<String>> _categoryEmojis = {
     ProductCategory.plants: ['🪴', '🌿', '🌸', '🌺', '🌹', '🌻', '🥭', '🎍'],
@@ -195,6 +196,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
   }
 
   Future<void> _saveProduct() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
     final salePrice = double.tryParse(_salePriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
@@ -208,8 +210,66 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
     }
     final firstStock = branchStocks.values.firstOrNull ?? 0;
 
-    if (widget.isEditing) {
-      final updatedProduct = widget.productToEdit!.copyWith(
+    setState(() => _isSaving = true);
+
+    try {
+      if (widget.isEditing) {
+        final updatedProduct = widget.productToEdit!.copyWith(
+          name: _nameCtrl.text.trim(),
+          category: _category,
+          categoryId: _selectedCategoryId,
+          categoryName: _selectedCategoryName,
+          subcategory: _subcategory,
+          salePrice: salePrice,
+          costPrice: costPrice,
+          stock: firstStock,
+          minStock: minStock,
+          originType: _originType,
+          sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
+          vendorId: _selectedVendorId,
+          vendorName: ref.read(vendorProvider).where((v) => v.id == _selectedVendorId).firstOrNull?.name,
+          imageEmoji: _selectedEmoji,
+          customImagePath: _customImagePath,
+          clearCustomImage: _customImagePath == null,
+          sku: _skuCtrl.text.trim(),
+          barcode: _barcodeCtrl.text.trim().isNotEmpty ? _barcodeCtrl.text.trim() : null,
+        );
+
+        final ok = await ref.read(catalogProvider.notifier).updateProduct(
+              updatedProduct,
+              branchStocks: branchStocks,
+            );
+
+        if (!ok || !mounted) return;
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                ProductAvatar(
+                  imageEmoji: _selectedEmoji,
+                  customImagePath: _customImagePath,
+                  size: 24,
+                  fontSize: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('ကုန်ပစ္စည်း "${updatedProduct.name}" အချက်အလက်များကို ပြင်ဆင်ပြီးပါပြီ။'),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      final newId = 'prod_${DateTime.now().millisecondsSinceEpoch}';
+
+      final newProduct = MockProduct(
+        id: newId,
         name: _nameCtrl.text.trim(),
         category: _category,
         categoryId: _selectedCategoryId,
@@ -225,15 +285,17 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
         vendorName: ref.read(vendorProvider).where((v) => v.id == _selectedVendorId).firstOrNull?.name,
         imageEmoji: _selectedEmoji,
         customImagePath: _customImagePath,
-        clearCustomImage: _customImagePath == null,
-        sku: _skuCtrl.text.trim(),
+        sku: _skuCtrl.text.trim().isNotEmpty
+            ? _skuCtrl.text.trim()
+            : 'PRD-${DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase()}',
         barcode: _barcodeCtrl.text.trim().isNotEmpty ? _barcodeCtrl.text.trim() : null,
       );
 
-      final ok = await ref.read(catalogProvider.notifier).updateProduct(
-            updatedProduct,
-            branchStocks: branchStocks,
-          );
+      // Save to catalog & initialize branch stocks
+      final ok = await ref.read(catalogProvider.notifier).addProduct(
+        newProduct,
+        branchStocks: branchStocks,
+      );
 
       if (!ok || !mounted) return;
       Navigator.of(context).pop();
@@ -250,7 +312,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('ကုန်ပစ္စည်း "${updatedProduct.name}" အချက်အလက်များကို ပြင်ဆင်ပြီးပါပြီ။'),
+                child: Text('Successfully added "${newProduct.name}" to inventory!'),
               ),
             ],
           ),
@@ -258,63 +320,11 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
           duration: const Duration(seconds: 3),
         ),
       );
-      return;
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
-
-    final newId = 'prod_${DateTime.now().millisecondsSinceEpoch}';
-
-    final newProduct = MockProduct(
-      id: newId,
-      name: _nameCtrl.text.trim(),
-      category: _category,
-      categoryId: _selectedCategoryId,
-      categoryName: _selectedCategoryName,
-      subcategory: _subcategory,
-      salePrice: salePrice,
-      costPrice: costPrice,
-      stock: firstStock,
-      minStock: minStock,
-      originType: _originType,
-      sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
-      vendorId: _selectedVendorId,
-      vendorName: ref.read(vendorProvider).where((v) => v.id == _selectedVendorId).firstOrNull?.name,
-      imageEmoji: _selectedEmoji,
-      customImagePath: _customImagePath,
-      sku: _skuCtrl.text.trim().isNotEmpty
-          ? _skuCtrl.text.trim()
-          : 'PRD-${DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase()}',
-      barcode: _barcodeCtrl.text.trim().isNotEmpty ? _barcodeCtrl.text.trim() : null,
-    );
-
-    // Save to catalog & initialize branch stocks
-    final ok = await ref.read(catalogProvider.notifier).addProduct(
-      newProduct,
-      branchStocks: branchStocks,
-    );
-
-    if (!ok || !mounted) return;
-    Navigator.of(context).pop();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            ProductAvatar(
-              imageEmoji: _selectedEmoji,
-              customImagePath: _customImagePath,
-              size: 24,
-              fontSize: 18,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text('Successfully added "${newProduct.name}" to inventory!'),
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.success,
-        duration: const Duration(seconds: 3),
-      ),
-    );
   }
 
   @override
@@ -406,15 +416,24 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                   ),
                   IconButton(
                     icon: Icon(Icons.close_rounded, color: AppColors.textMuted),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
 
+            if (_isSaving)
+              const LinearProgressIndicator(
+                minHeight: 3,
+                color: AppColors.primary,
+                backgroundColor: Colors.transparent,
+              ),
+
             // ── Scrollable Form Body ────────────────────────────
             Expanded(
-              child: SingleChildScrollView(
+              child: IgnorePointer(
+                ignoring: _isSaving,
+                child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Form(
                   key: _formKey,
@@ -1091,6 +1110,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                 ),
               ),
             ),
+          ),
 
             // ── Dialog Actions Footer ───────────────────────────
             Container(
@@ -1104,17 +1124,28 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
                     child: Text('Cancel (ပယ်ဖျက်မည်)', style: TextStyle(color: AppColors.textMuted)),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
-                    onPressed: _saveProduct,
-                    icon: const Icon(Icons.check_circle_rounded, size: 18),
+                    onPressed: _isSaving ? null : _saveProduct,
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.check_circle_rounded, size: 18),
                     label: Text(
-                      widget.isEditing
-                          ? 'Update Product (အချက်အလက် ပြင်ဆင်မည်)'
-                          : 'Save & Add to Catalog (သိမ်းဆည်းမည်)',
+                      _isSaving
+                          ? 'သိမ်းဆည်းနေပါသည်...'
+                          : (widget.isEditing
+                              ? 'Update Product (အချက်အလက် ပြင်ဆင်မည်)'
+                              : 'Save & Add to Catalog (သိမ်းဆည်းမည်)'),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,

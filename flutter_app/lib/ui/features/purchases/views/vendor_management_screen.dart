@@ -480,6 +480,7 @@ class _VendorDialogState extends ConsumerState<_VendorDialog> {
   late TextEditingController _addressCtrl;
   late TextEditingController _notesCtrl;
   late bool _isActive;
+  bool _isSaving = false;
 
   bool get _isEdit => widget.vendor != null;
 
@@ -503,33 +504,39 @@ class _VendorDialogState extends ConsumerState<_VendorDialog> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
     final notifier = ref.read(vendorProvider.notifier);
+    setState(() => _isSaving = true);
 
-    if (_isEdit) {
-      final ok = await notifier.updateVendor(widget.vendor!.copyWith(
-        name: _nameCtrl.text.trim(),
-        phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
-        clearPhone: _phoneCtrl.text.trim().isEmpty,
-        address: _addressCtrl.text.trim().isEmpty
-            ? null
-            : _addressCtrl.text.trim(),
-        clearAddress: _addressCtrl.text.trim().isEmpty,
-        notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-        clearNotes: _notesCtrl.text.trim().isEmpty,
-        isActive: _isActive,
-      ));
-      if (!ok || !mounted) return;
-    } else {
-      final created = await notifier.addVendor(
-        name: _nameCtrl.text.trim(),
-        phone: _phoneCtrl.text.trim(),
-        address: _addressCtrl.text.trim(),
-        notes: _notesCtrl.text.trim(),
-      );
-      if (created == null || !mounted) return;
+    try {
+      if (_isEdit) {
+        final ok = await notifier.updateVendor(widget.vendor!.copyWith(
+          name: _nameCtrl.text.trim(),
+          phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+          clearPhone: _phoneCtrl.text.trim().isEmpty,
+          address: _addressCtrl.text.trim().isEmpty
+              ? null
+              : _addressCtrl.text.trim(),
+          clearAddress: _addressCtrl.text.trim().isEmpty,
+          notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+          clearNotes: _notesCtrl.text.trim().isEmpty,
+          isActive: _isActive,
+        ));
+        if (!ok || !mounted) return;
+      } else {
+        final created = await notifier.addVendor(
+          name: _nameCtrl.text.trim(),
+          phone: _phoneCtrl.text.trim(),
+          address: _addressCtrl.text.trim(),
+          notes: _notesCtrl.text.trim(),
+        );
+        if (created == null || !mounted) return;
+      }
+      Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-    Navigator.of(context).pop();
   }
 
   @override
@@ -626,13 +633,26 @@ class _VendorDialogState extends ConsumerState<_VendorDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
           child: const Text('ဖျက်သိမ်းမည်'),
         ),
         FilledButton.icon(
-          onPressed: _save,
-          icon: const Icon(Icons.save_rounded, size: 18),
-          label: Text(_isEdit ? 'ပြင်ဆင်မည်' : 'ထည့်သွင်းမည်'),
+          onPressed: _isSaving ? null : _save,
+          icon: _isSaving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.save_rounded, size: 18),
+          label: Text(
+            _isSaving
+                ? 'သိမ်းဆည်းနေပါသည်...'
+                : (_isEdit ? 'ပြင်ဆင်မည်' : 'ထည့်သွင်းမည်'),
+          ),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.primary,
             shape: RoundedRectangleBorder(

@@ -1494,6 +1494,7 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
   late List<AppMenuPermission> _selectedPermissions;
   String? _branchId;
   late bool _isActive;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -1545,55 +1546,62 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
   }
 
   Future<void> _saveUser() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
     final isEdit = widget.userToEdit != null;
-    bool ok;
+    setState(() => _isSaving = true);
 
-    if (isEdit) {
-      final updated = widget.userToEdit!.copyWith(
-        name: _nameCtrl.text.trim(),
-        email: _emailCtrl.text.trim(),
-        password: _passwordCtrl.text.trim(),
-        phone:
-            _phoneCtrl.text.trim().isNotEmpty ? _phoneCtrl.text.trim() : null,
-        role: _role,
-        permissionGroupId: _permissionGroupId,
-        customPermissions: _selectedPermissions,
-        branchId: _branchId,
-        clearBranch: _branchId == null,
-        isActive: _isActive,
+    try {
+      bool ok;
+
+      if (isEdit) {
+        final updated = widget.userToEdit!.copyWith(
+          name: _nameCtrl.text.trim(),
+          email: _emailCtrl.text.trim(),
+          password: _passwordCtrl.text.trim(),
+          phone:
+              _phoneCtrl.text.trim().isNotEmpty ? _phoneCtrl.text.trim() : null,
+          role: _role,
+          permissionGroupId: _permissionGroupId,
+          customPermissions: _selectedPermissions,
+          branchId: _branchId,
+          clearBranch: _branchId == null,
+          isActive: _isActive,
+        );
+        ok = await ref.read(authProvider.notifier).updateUser(updated);
+      } else {
+        final newUser = AppUser(
+          id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
+          name: _nameCtrl.text.trim(),
+          email: _emailCtrl.text.trim(),
+          password: _passwordCtrl.text.trim(),
+          phone:
+              _phoneCtrl.text.trim().isNotEmpty ? _phoneCtrl.text.trim() : null,
+          role: _role,
+          permissionGroupId: _permissionGroupId,
+          customPermissions: _selectedPermissions,
+          branchId: _branchId,
+          isActive: _isActive,
+          createdAt: DateTime.now(),
+        );
+        ok = await ref.read(authProvider.notifier).addUser(newUser);
+      }
+
+      if (!ok || !mounted) return;
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isEdit
+              ? 'Successfully updated "${_nameCtrl.text}"'
+              : 'Created new user account "${_nameCtrl.text}"'),
+          backgroundColor: AppColors.success,
+        ),
       );
-      ok = await ref.read(authProvider.notifier).updateUser(updated);
-    } else {
-      final newUser = AppUser(
-        id: 'usr_${DateTime.now().millisecondsSinceEpoch}',
-        name: _nameCtrl.text.trim(),
-        email: _emailCtrl.text.trim(),
-        password: _passwordCtrl.text.trim(),
-        phone:
-            _phoneCtrl.text.trim().isNotEmpty ? _phoneCtrl.text.trim() : null,
-        role: _role,
-        permissionGroupId: _permissionGroupId,
-        customPermissions: _selectedPermissions,
-        branchId: _branchId,
-        isActive: _isActive,
-        createdAt: DateTime.now(),
-      );
-      ok = await ref.read(authProvider.notifier).addUser(newUser);
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-
-    if (!ok || !mounted) return;
-    Navigator.of(context).pop();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(isEdit
-            ? 'Successfully updated "${_nameCtrl.text}"'
-            : 'Created new user account "${_nameCtrl.text}"'),
-        backgroundColor: AppColors.success,
-      ),
-    );
   }
 
   @override
@@ -2010,18 +2018,29 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
                     child: Text('Cancel (မလုပ်ပါ)',
                         style: TextStyle(color: AppColors.textMuted)),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
-                    onPressed: _saveUser,
-                    icon: const Icon(Icons.check_rounded, size: 18),
+                    onPressed: _isSaving ? null : _saveUser,
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.check_rounded, size: 18),
                     label: Text(
-                      isEdit
-                          ? 'Save Changes (သိမ်းမည်)'
-                          : 'Create User (အကောင့်ဖွင့်မည်)',
+                      _isSaving
+                          ? 'သိမ်းဆည်းနေပါသည်...'
+                          : (isEdit
+                              ? 'Save Changes (သိမ်းမည်)'
+                              : 'Create User (အကောင့်ဖွင့်မည်)'),
                       style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textOnPrimary),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -2065,6 +2084,7 @@ class _AddEditPermissionGroupDialogState
   late TextEditingController _descCtrl;
   late String _selectedIcon;
   late List<AppMenuPermission> _selectedPermissions;
+  bool _isSaving = false;
 
   static const _iconPresets = [
     '👑', '🏢', '💵', '📦', '🛡️', '💼', '🧑‍🌾', '🏷️', '🪴', '📊'
@@ -2091,6 +2111,7 @@ class _AddEditPermissionGroupDialogState
   }
 
   Future<void> _saveGroup() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedPermissions.isEmpty) {
@@ -2105,38 +2126,43 @@ class _AddEditPermissionGroupDialogState
 
     final isEdit = widget.groupToEdit != null;
     final notifier = ref.read(permissionGroupProvider.notifier);
+    setState(() => _isSaving = true);
 
-    bool ok;
-    if (isEdit) {
-      ok = await notifier.updateGroup(
-        id: widget.groupToEdit!.id,
-        name: _nameCtrl.text.trim(),
-        burmeseName: _burmeseNameCtrl.text.trim(),
-        description: _descCtrl.text.trim(),
-        icon: _selectedIcon,
-        permissions: _selectedPermissions,
+    try {
+      bool ok;
+      if (isEdit) {
+        ok = await notifier.updateGroup(
+          id: widget.groupToEdit!.id,
+          name: _nameCtrl.text.trim(),
+          burmeseName: _burmeseNameCtrl.text.trim(),
+          description: _descCtrl.text.trim(),
+          icon: _selectedIcon,
+          permissions: _selectedPermissions,
+        );
+      } else {
+        ok = await notifier.addGroup(
+          name: _nameCtrl.text.trim(),
+          burmeseName: _burmeseNameCtrl.text.trim(),
+          description: _descCtrl.text.trim(),
+          icon: _selectedIcon,
+          permissions: _selectedPermissions,
+        );
+      }
+
+      if (!ok || !mounted) return;
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isEdit
+              ? 'Updated permission group "${_nameCtrl.text}"'
+              : 'Created new permission group "${_nameCtrl.text}"'),
+          backgroundColor: AppColors.success,
+        ),
       );
-    } else {
-      ok = await notifier.addGroup(
-        name: _nameCtrl.text.trim(),
-        burmeseName: _burmeseNameCtrl.text.trim(),
-        description: _descCtrl.text.trim(),
-        icon: _selectedIcon,
-        permissions: _selectedPermissions,
-      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-
-    if (!ok || !mounted) return;
-    Navigator.of(context).pop();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(isEdit
-            ? 'Updated permission group "${_nameCtrl.text}"'
-            : 'Created new permission group "${_nameCtrl.text}"'),
-        backgroundColor: AppColors.success,
-      ),
-    );
   }
 
   @override
@@ -2402,22 +2428,31 @@ class _AddEditPermissionGroupDialogState
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
                     child: Text('မလုပ်တော့ပါ (Cancel)',
                         style: TextStyle(color: AppColors.textMuted)),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
-                    onPressed: _saveGroup,
+                    onPressed: _isSaving ? null : _saveGroup,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.textOnPrimary,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 12),
                     ),
-                    child: Text(isEdit
-                        ? 'Save Changes (သိမ်းမည်)'
-                        : 'Create Group (အုပ်စုဖွင့်မည်)'),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(isEdit
+                            ? 'Save Changes (သိမ်းမည်)'
+                            : 'Create Group (အုပ်စုဖွင့်မည်)'),
                   ),
                 ],
               ),
