@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/mock/mock_products.dart';
 import '../../../../data/repositories/branch_repository.dart';
 import '../../inventory/view_models/inventory_notifier.dart';
+import '../../purchases/view_models/vendor_notifier.dart';
 import '../../settings/view_models/category_notifier.dart';
 
 // ============================================================
@@ -158,14 +159,18 @@ final filteredProductsProvider = Provider<List<MockProduct>>((ref) {
     }
   }
 
-  // ── Search query ──────────────────────────────────────────
+  // ── Search query (Item name, Category, Vendor, Plant Origin, SKU, Barcode) ──
   if (filter.searchQuery.isNotEmpty) {
-    final q = filter.searchQuery.toLowerCase();
+    final catNames = {for (final c in categories) c.id: c.name};
+    final vendors = ref.watch(vendorProvider);
+    final vendorNames = {for (final v in vendors) v.id: v.name};
+
     products = products
-        .where((p) =>
-            p.name.toLowerCase().contains(q) ||
-            p.sku.toLowerCase().contains(q) ||
-            (p.barcode?.contains(q) ?? false))
+        .where((p) => p.matchesSearch(
+              filter.searchQuery,
+              categoryNames: catNames,
+              vendorNames: vendorNames,
+            ))
         .toList();
   }
 

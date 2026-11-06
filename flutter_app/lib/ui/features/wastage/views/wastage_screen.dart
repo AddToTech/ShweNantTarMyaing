@@ -999,10 +999,7 @@ class _ProductPickerSheetState extends ConsumerState<_ProductPickerSheet> {
 
     final filtered = catalog.where((p) {
       if (_query.isEmpty) return true;
-      final q = _query.toLowerCase();
-      return p.name.toLowerCase().contains(q) ||
-          p.sku.toLowerCase().contains(q) ||
-          (p.barcode != null && p.barcode!.contains(q));
+      return p.matchesSearch(_query);
     }).toList();
 
     return SizedBox(

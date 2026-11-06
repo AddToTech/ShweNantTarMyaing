@@ -360,7 +360,7 @@ class _NewPurchaseTabState extends ConsumerState<_NewPurchaseTab> {
         if (!matched) return false;
       }
       if (_searchQuery.isNotEmpty &&
-          !p.name.toLowerCase().contains(_searchQuery.toLowerCase())) {
+          !p.matchesSearch(_searchQuery)) {
         return false;
       }
       return true;

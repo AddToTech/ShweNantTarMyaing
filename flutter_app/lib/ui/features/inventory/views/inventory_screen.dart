@@ -7,6 +7,7 @@ import '../../../../data/repositories/branch_repository.dart';
 import '../../../shared/widgets/product_avatar.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../auth/view_models/auth_notifier.dart';
+import '../../purchases/view_models/vendor_notifier.dart';
 import '../../settings/view_models/category_notifier.dart';
 import '../../settings/view_models/permission_group_notifier.dart';
 import '../view_models/inventory_notifier.dart';
@@ -227,10 +228,14 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         if (!matched) return false;
       }
       if (_searchCtrl.text.isNotEmpty) {
-        final q = _searchCtrl.text.toLowerCase();
-        final match = item.product.name.toLowerCase().contains(q) ||
-            item.product.sku.toLowerCase().contains(q) ||
-            (item.product.barcode != null && item.product.barcode!.contains(q));
+        final catNames = {for (final c in activeCategories) c.id: c.name};
+        final vendors = ref.watch(vendorProvider);
+        final vendorNames = {for (final v in vendors) v.id: v.name};
+        final match = item.product.matchesSearch(
+          _searchCtrl.text,
+          categoryNames: catNames,
+          vendorNames: vendorNames,
+        );
         if (!match) return false;
       }
       return true;

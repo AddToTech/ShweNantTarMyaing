@@ -643,7 +643,7 @@ class _TopBarState extends ConsumerState<_TopBar> {
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 10),
-                  hintText: 'ပစ္စည်းအမည်၊ SKU၊ ဘားကုဒ် ရှာဖွေပါ...',
+                  hintText: 'ပစ္စည်းအမည်၊ အမျိုးအစား၊ ကုန်သည်၊ မူရင်းဒေသ၊ SKU ဖြင့် ရှာဖွေပါ...',
                   hintStyle: TextStyle(
                       color: AppColors.textMuted, fontSize: 12),
                   prefixIcon: Icon(Icons.search_rounded,

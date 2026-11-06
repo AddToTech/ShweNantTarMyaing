@@ -115,6 +115,67 @@ class MockProduct {
     return false;
   }
 
+  /// Checks whether this product matches a comprehensive search query:
+  /// item name, category name, vendor name, plant origin, subcategory, SKU, or barcode.
+  bool matchesSearch(
+    String query, {
+    Map<String, String>? categoryNames,
+    Map<String, String>? vendorNames,
+  }) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return true;
+
+    // 1. Item Name
+    if (name.toLowerCase().contains(q)) return true;
+
+    // 2. SKU & Barcode
+    if (sku.toLowerCase().contains(q)) return true;
+    if (barcode != null && barcode!.toLowerCase().contains(q)) return true;
+
+    // 3. Category Name (stored or resolved)
+    if (categoryName != null && categoryName!.toLowerCase().contains(q)) return true;
+    if (category.name.toLowerCase().contains(q)) return true;
+    if (category == ProductCategory.plants && (q.contains('အပင်') || 'အပင်'.contains(q) || q.contains('plant') || 'plants'.contains(q))) return true;
+    if (category == ProductCategory.pots && (q.contains('ပန်းအိုး') || q.contains('အိုး') || 'ပန်းအိုး'.contains(q) || q.contains('pot') || 'pots'.contains(q))) return true;
+    if (category == ProductCategory.chemicals && (q.contains('ဆေး') || q.contains('မြေသြဇာ') || 'ဆေး'.contains(q) || q.contains('chem') || 'chemicals'.contains(q))) return true;
+    if (category == ProductCategory.tools && (q.contains('ကိရိယာ') || 'ကိရိယာ'.contains(q) || q.contains('tool') || 'tools'.contains(q))) return true;
+    if (category == ProductCategory.others && (q.contains('အထွေထွေ') || 'အထွေထွေ'.contains(q) || q.contains('other') || 'others'.contains(q))) return true;
+    if (categoryId != null && categoryNames != null && categoryNames[categoryId]?.toLowerCase().contains(q) == true) {
+      return true;
+    }
+
+    // 4. Subcategory Name
+    if (subcategory.isNotEmpty && subcategory.toLowerCase().contains(q)) return true;
+
+    // 5. Vendor Name (stored or resolved)
+    if (vendorName != null && vendorName!.toLowerCase().contains(q)) return true;
+    if (vendorId != null && vendorNames != null && vendorNames[vendorId]?.toLowerCase().contains(q) == true) {
+      return true;
+    }
+
+    // 6. Plant Origin (burmese, short label, english name)
+    if (originType != null) {
+      if (originType!.burmeseLabel.toLowerCase().contains(q)) return true;
+      if (originType!.shortLabel.toLowerCase().contains(q)) return true;
+      final originStr = originType!.name.toLowerCase();
+      if (originStr.contains(q)) return true;
+      if (originType == OriginType.thaiImport &&
+          (q.contains('thai') || q.contains('ယိုးဒယား') || 'thai'.contains(q) || 'ယိုးဒယား'.contains(q))) {
+        return true;
+      }
+      if (originType == OriginType.chinaImport &&
+          (q.contains('china') || q.contains('တရုတ်') || 'china'.contains(q) || 'တရုတ်'.contains(q))) {
+        return true;
+      }
+      if (originType == OriginType.local &&
+          (q.contains('local') || q.contains('ပြည်တွင်း') || 'local'.contains(q) || 'ပြည်တွင်း'.contains(q))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   MockProduct copyWith({
     String? id,
     String? name,
