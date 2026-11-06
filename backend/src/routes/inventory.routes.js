@@ -114,8 +114,8 @@ router.post('/inventory/adjust', authenticate, requireRole('owner', 'manager'), 
 
     // Record audit log
     await query(
-      `INSERT INTO sync_audit_log (branch_id, entity_name, record_id, operation, changed_by, payload)
-       VALUES ($1, 'branch_inventories', $2, 'UPDATE', $3, $4)`,
+      `INSERT INTO sync_audit_log (branch_id, table_name, entity_name, record_id, operation, changed_by, payload)
+       VALUES ($1, 'branch_inventories', 'branch_inventories', $2, 'UPDATE', $3, $4)`,
       [
         targetBranchId,
         targetProductId,

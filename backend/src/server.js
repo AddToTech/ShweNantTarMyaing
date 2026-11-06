@@ -153,6 +153,14 @@ if (process.env.NODE_ENV !== 'test') {
       )
       .catch((err) => console.error('Migration notice (products_vendor_id):', err.message));
 
+    // Ensure sync_audit_log supports nullable table_name and entity_name
+    await pool
+      .query(
+        `ALTER TABLE sync_audit_log ALTER COLUMN table_name DROP NOT NULL;
+         ALTER TABLE sync_audit_log ADD COLUMN IF NOT EXISTS entity_name VARCHAR(60);`
+      )
+      .catch((err) => console.error('Migration notice (sync_audit_log):', err.message));
+
     // Ensure categories table supports burmese_name and emoji dynamically
     await pool
       .query(

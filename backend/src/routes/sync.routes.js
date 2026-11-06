@@ -128,8 +128,8 @@ router.post('/sync/push', async (req, res, next) => {
         }
 
         await client.query(
-          `INSERT INTO sync_audit_log (branch_id, entity_name, record_id, operation, changed_by, payload)
-           VALUES ($1, 'sales', $2, 'INSERT', $3, $4)`,
+          `INSERT INTO sync_audit_log (branch_id, table_name, entity_name, record_id, operation, changed_by, payload)
+           VALUES ($1, 'sales', 'sales', $2, 'INSERT', $3, $4)`,
           [targetBranchId, sale.saleUuid, actualCashierId, JSON.stringify(sale)]
         );
       }
@@ -186,8 +186,8 @@ router.post('/sync/push', async (req, res, next) => {
           );
 
           await client.query(
-            `INSERT INTO sync_audit_log (branch_id, entity_name, record_id, operation, changed_by, payload)
-             VALUES ($1, 'wastage_logs', $2, 'INSERT', $3, $4)`,
+            `INSERT INTO sync_audit_log (branch_id, table_name, entity_name, record_id, operation, changed_by, payload)
+             VALUES ($1, 'wastage_logs', 'wastage_logs', $2, 'INSERT', $3, $4)`,
             [targetBranchId, log.logUuid, actualRecorder, JSON.stringify(log)]
           );
         }

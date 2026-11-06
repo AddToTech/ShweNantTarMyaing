@@ -82,6 +82,7 @@ END $$;
 -- 6. SYNC AUDIT LOG: Schema fixes
 ALTER TABLE sync_audit_log ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches(id) ON DELETE SET NULL;
 ALTER TABLE sync_audit_log ADD COLUMN IF NOT EXISTS entity_name VARCHAR(60);
+ALTER TABLE sync_audit_log ALTER COLUMN table_name DROP NOT NULL;
 
 DO $$
 BEGIN
