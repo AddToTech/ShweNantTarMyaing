@@ -110,7 +110,7 @@ class WastageRepository {
 
     final payload = {
       'logUuid': clientUuid,
-      'branchId': branchId,
+      'branchId': resolveBranchUuid(branchId),
       'productId': productId,
       'productName': productName,
       'quantity': quantity,

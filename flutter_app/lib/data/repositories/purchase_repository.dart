@@ -93,7 +93,7 @@ class PurchaseRepository {
     bool autoApplyToInventory = false,
   }) async {
     final payload = {
-      'branchId': branchId,
+      'branchId': resolveBranchUuid(branchId),
       'vendorId': vendorId,
       'purchaseDate': (purchaseDate ?? DateTime.now()).toIso8601String().split('T').first,
       'discount': discount,

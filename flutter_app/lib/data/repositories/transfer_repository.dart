@@ -83,8 +83,8 @@ class TransferRepository {
     String? notes,
   }) async {
     final payload = {
-      'fromBranchId': fromBranchId,
-      'toBranchId': toBranchId,
+      'fromBranchId': resolveBranchUuid(fromBranchId),
+      'toBranchId': resolveBranchUuid(toBranchId),
       'notes': notes,
       'items': items.map((i) => {
         'productId': i.productId,

@@ -127,7 +127,7 @@ class SaleRepository {
 
     final payload = {
       'saleUuid': clientUuid,
-      'branchId': branchId,
+      'branchId': resolveBranchUuid(branchId),
       'cashierId': cashierId,
       'cashierName': cashierName,
       'customerName': customerName,

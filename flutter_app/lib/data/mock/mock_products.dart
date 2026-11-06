@@ -2,6 +2,7 @@
 // Product model & catalog (synced with PostgreSQL backend)
 // ============================================================
 
+import 'dart:collection';
 import 'dart:convert';
 
 enum ProductCategory { all, plants, pots, chemicals, tools, others }
@@ -268,10 +269,61 @@ const Map<ProductCategory, List<String>> kSubFilters = {};
 
 // ── Dynamic Branch definitions (synced from GET /api/v1/branches) ─────────
 
-Map<String, String> kBranches = {
+/// A customized Map that stores each unique branch exactly once (avoiding duplicate dropdown items),
+/// while seamlessly resolving lookups by canonical branch key ('branch_a') or backend UUID.
+class BranchLookupMap extends MapBase<String, String> {
+  final Map<String, String> _internal = {};
+
+  BranchLookupMap([Map<String, String>? initial]) {
+    if (initial != null) _internal.addAll(initial);
+  }
+
+  @override
+  String? operator [](Object? key) {
+    if (key == null) return null;
+    final direct = _internal[key];
+    if (direct != null) return direct;
+    final mappedKey = kBranchUuidToKey[key];
+    if (mappedKey != null && _internal.containsKey(mappedKey)) {
+      return _internal[mappedKey];
+    }
+    final mappedUuid = kBranchKeyToUuid[key];
+    if (mappedUuid != null && _internal.containsKey(mappedUuid)) {
+      return _internal[mappedUuid];
+    }
+    return null;
+  }
+
+  @override
+  void operator []=(String key, String value) {
+    _internal[key] = value;
+  }
+
+  @override
+  void clear() => _internal.clear();
+
+  @override
+  Iterable<String> get keys => _internal.keys;
+
+  @override
+  String? remove(Object? key) => _internal.remove(key);
+
+  @override
+  bool containsKey(Object? key) {
+    if (key == null) return false;
+    if (_internal.containsKey(key)) return true;
+    final mappedKey = kBranchUuidToKey[key];
+    if (mappedKey != null && _internal.containsKey(mappedKey)) return true;
+    final mappedUuid = kBranchKeyToUuid[key];
+    if (mappedUuid != null && _internal.containsKey(mappedUuid)) return true;
+    return false;
+  }
+}
+
+Map<String, String> kBranches = BranchLookupMap({
   'branch_a': 'SitePyoe Branch A',
   'branch_b': 'SitePyoe Branch B',
-};
+});
 
 final Map<String, String> kBranchUuidToKey = {
   'bec6e204-8cd4-45f1-a668-3ca5ca8fb668': 'branch_a',
@@ -286,8 +338,8 @@ final Map<String, String> kBranchKeyToUuid = {
 /// Normalizes a database branch UUID or branch name into the app's canonical branch key.
 String normalizeBranchId(String? rawId, {String? branchName}) {
   if (rawId == null || rawId.isEmpty) return '';
-  if (kBranches.containsKey(rawId)) return rawId;
   if (kBranchUuidToKey.containsKey(rawId)) return kBranchUuidToKey[rawId]!;
+  if (kBranches.containsKey(rawId)) return rawId;
 
   final lowerId = rawId.toLowerCase();
   final lowerName = (branchName ?? '').toLowerCase();
@@ -316,8 +368,15 @@ String resolveBranchUuid(String? branchKeyOrId) {
 void updateDynamicBranchesFromApi(List<Map<String, dynamic>> rawBranches) {
   if (rawBranches.isEmpty) return;
   final Map<String, String> updated = {};
-  for (var i = 0; i < rawBranches.length; i++) {
-    final row = rawBranches[i];
+  kBranchUuidToKey.clear();
+  kBranchKeyToUuid.clear();
+
+  // Filter for active branches if is_active is present
+  final activeList = rawBranches.where((r) => r['is_active'] != false && r['isActive'] != false).toList();
+  final listToUse = activeList.isNotEmpty ? activeList : rawBranches;
+
+  for (var i = 0; i < listToUse.length; i++) {
+    final row = listToUse[i];
     final id = row['id']?.toString() ?? '';
     final name = row['name']?.toString() ?? 'Branch ${i + 1}';
     final address = row['address']?.toString();
@@ -334,13 +393,12 @@ void updateDynamicBranchesFromApi(List<Map<String, dynamic>> rawBranches) {
       key = id.isNotEmpty ? id : 'branch_${i + 1}';
     }
 
+    // Only add ONE canonical key per branch into updated map so dropdowns will never duplicate!
     updated[key] = label;
     if (id.isNotEmpty) {
-      updated[id] = label;
       kBranchUuidToKey[id] = key;
       kBranchKeyToUuid[key] = id;
-      kBranchKeyToUuid[id] = id;
     }
   }
-  kBranches = updated;
+  kBranches = BranchLookupMap(updated);
 }
