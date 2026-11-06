@@ -544,11 +544,11 @@ class _PosBodyState extends ConsumerState<_PosBody> {
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.all(12),
                           gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 175,
+                            mainAxisExtent: 165,
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
-                            childAspectRatio: 0.72,
                           ),
                           itemCount: products.length,
                           itemBuilder: (_, i) =>

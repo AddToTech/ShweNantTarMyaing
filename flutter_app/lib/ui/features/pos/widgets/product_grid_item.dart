@@ -85,18 +85,18 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: qtyInCart > 0
-                  ? AppColors.primary.withValues(alpha: 0.65)
+                  ? AppColors.primary
                   : AppColors.border,
-              width: qtyInCart > 0 ? 1.5 : 1.0,
+              width: qtyInCart > 0 ? 1.8 : 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: _bgColor.withValues(alpha: 0.10),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -105,22 +105,22 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
             children: [
               // ── Image / Emoji area ────────────────────────
               Expanded(
-                flex: 5,
+                flex: 3,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     // Gradient background & product image
                     ClipRRect(
                       borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(15)),
+                          top: Radius.circular(11)),
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              _bgColor.withValues(alpha: 0.38),
-                              _bgColor.withValues(alpha: 0.16),
+                              _bgColor.withValues(alpha: 0.30),
+                              _bgColor.withValues(alpha: 0.12),
                             ],
                           ),
                         ),
@@ -130,7 +130,7 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
                             customImagePath: widget.product.customImagePath,
                             width: double.infinity,
                             height: double.infinity,
-                            fontSize: 36,
+                            fontSize: 34,
                             borderRadius: 0,
                           ),
                         ),
@@ -140,7 +140,7 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
                     // Origin badge (top-left)
                     if (widget.product.originType != null)
                       Positioned(
-                        top: 6, left: 6,
+                        top: 5, left: 5,
                         child: _Badge(
                           label: _originLabel,
                           color: _originColor,
@@ -149,15 +149,13 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
 
                     // Stock badge (top-right)
                     Positioned(
-                      top: 6, right: 6,
+                      top: 5, right: 5,
                       child: _Badge(
                         label: '${widget.product.stock}',
                         color: widget.product.isLowStock
                             ? AppColors.error
-                            : AppColors.surface.withValues(alpha: 0.85),
-                        textColor: widget.product.isLowStock
-                            ? Colors.white
-                            : AppColors.textSecondary,
+                            : Colors.black.withValues(alpha: 0.50),
+                        textColor: Colors.white,
                         hasBorder: !widget.product.isLowStock,
                       ),
                     ),
@@ -165,22 +163,34 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
                     // In-cart quantity bubble (bottom-right)
                     if (qtyInCart > 0)
                       Positioned(
-                        bottom: 6, right: 6,
+                        bottom: 5, right: 5,
                         child: Container(
-                          width: 22, height: 22,
-                          decoration: const BoxDecoration(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
                             color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              '$qtyInCart',
-                              style: const TextStyle(
-                                color: AppColors.textOnPrimary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
                               ),
-                            ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.shopping_cart_rounded, size: 10, color: AppColors.textOnPrimary),
+                              const SizedBox(width: 3),
+                              Text(
+                                '$qtyInCart',
+                                style: const TextStyle(
+                                  color: AppColors.textOnPrimary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -191,7 +201,7 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.58),
                           borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(15)),
+                              top: Radius.circular(11)),
                         ),
                         child: const Center(
                           child: Text(
@@ -213,43 +223,55 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
 
               // ── Product info ──────────────────────────────
               Expanded(
-                flex: 4,
+                flex: 2,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                  padding: const EdgeInsets.fromLTRB(9, 7, 9, 7),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         widget.product.name,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: isOutOfStock
                               ? AppColors.textMuted
                               : AppColors.textPrimary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          height: 1.3,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (widget.product.sizeLabel != null)
-                        Text(
-                          widget.product.sizeLabel!,
-                          style: TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 9.5,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            '${fmt.format(widget.product.salePrice)} Ks',
+                            style: TextStyle(
+                              color: isOutOfStock
+                                  ? AppColors.textMuted
+                                  : AppColors.accent,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ),
-                      const Spacer(),
-                      Text(
-                        '${fmt.format(widget.product.salePrice)} Ks',
-                        style: TextStyle(
-                          color: isOutOfStock
-                              ? AppColors.textMuted
-                              : AppColors.accent,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
+                          if (widget.product.sizeLabel != null &&
+                              widget.product.sizeLabel!.isNotEmpty)
+                            Flexible(
+                              child: Text(
+                                widget.product.sizeLabel!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ],
                   ),
