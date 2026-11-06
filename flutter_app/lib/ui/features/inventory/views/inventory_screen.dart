@@ -10,6 +10,7 @@ import '../../auth/view_models/auth_notifier.dart';
 import '../../purchases/view_models/vendor_notifier.dart';
 import '../../settings/view_models/category_notifier.dart';
 import '../../settings/view_models/permission_group_notifier.dart';
+import '../../settings/view_models/plant_origin_notifier.dart';
 import '../view_models/inventory_notifier.dart';
 import 'add_product_dialog.dart';
 
@@ -200,12 +201,18 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     });
     ref.watch(branchesProvider);
     final activeCategories = ref.watch(categoryNotifierProvider);
+    final vendors = ref.watch(vendorProvider);
+    final origins = ref.watch(activePlantOriginsProvider);
     final authState = ref.watch(authProvider);
     final permissionGroups = ref.watch(permissionGroupProvider);
     final canDelete = authState.currentUser?.canDeleteData(permissionGroups) ?? false;
     final isCatalogLoading = ref.watch(catalogLoadingProvider);
     final currencyFmt = NumberFormat('#,###');
     final allProducts = ref.watch(branchInventoryProvider(_selectedBranch));
+
+    final catNames = {for (final c in activeCategories) c.id: c.name};
+    final vendorNames = {for (final v in vendors) v.id: v.name};
+    final originNames = {for (final o in origins) o.id: o.name};
 
     final selectedCatItem = _selectedCategoryId == 'all'
         ? null
@@ -228,13 +235,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         if (!matched) return false;
       }
       if (_searchCtrl.text.isNotEmpty) {
-        final catNames = {for (final c in activeCategories) c.id: c.name};
-        final vendors = ref.watch(vendorProvider);
-        final vendorNames = {for (final v in vendors) v.id: v.name};
         final match = item.product.matchesSearch(
           _searchCtrl.text,
           categoryNames: catNames,
           vendorNames: vendorNames,
+          originNames: originNames,
         );
         if (!match) return false;
       }
@@ -360,9 +365,20 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       onChanged: (_) => setState(() {}),
                       style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                       decoration: InputDecoration(
-                        hintText: 'ပစ္စည်းအမည်၊ SKU သို့မဟုတ် ဘားကုဒ် ရှာဖွေပါ...',
+                        hintText: 'ပစ္စည်းအမည်၊ အမျိုးအစား၊ ကုန်သည်၊ မူရင်းဒေသ၊ SKU ဖြင့် ရှာဖွေပါ...',
                         hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12),
                         prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textMuted),
+                        suffixIcon: _searchCtrl.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 16),
+                                color: AppColors.textMuted,
+                                splashRadius: 16,
+                                onPressed: () {
+                                  _searchCtrl.clear();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
                         filled: true,
                         fillColor: AppColors.surface,
                         contentPadding: EdgeInsets.zero,

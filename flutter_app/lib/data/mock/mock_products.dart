@@ -132,6 +132,7 @@ class MockProduct {
     String query, {
     Map<String, String>? categoryNames,
     Map<String, String>? vendorNames,
+    Map<String, String>? originNames,
   }) {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return true;
@@ -166,6 +167,9 @@ class MockProduct {
 
     // 6. Plant Origin (burmese, short label, english name, dynamic origin name)
     if (originName != null && originName!.toLowerCase().contains(q)) return true;
+    if (originId != null && originNames != null && originNames[originId]?.toLowerCase().contains(q) == true) {
+      return true;
+    }
     if (originType != null) {
       if (originType!.burmeseLabel.toLowerCase().contains(q)) return true;
       if (originType!.shortLabel.toLowerCase().contains(q)) return true;

@@ -4,6 +4,7 @@ import '../../../../data/repositories/branch_repository.dart';
 import '../../inventory/view_models/inventory_notifier.dart';
 import '../../purchases/view_models/vendor_notifier.dart';
 import '../../settings/view_models/category_notifier.dart';
+import '../../settings/view_models/plant_origin_notifier.dart';
 
 // ============================================================
 // POS Filter State
@@ -173,12 +174,15 @@ final filteredProductsProvider = Provider<List<MockProduct>>((ref) {
     final catNames = {for (final c in categories) c.id: c.name};
     final vendors = ref.watch(vendorProvider);
     final vendorNames = {for (final v in vendors) v.id: v.name};
+    final origins = ref.watch(activePlantOriginsProvider);
+    final originNames = {for (final o in origins) o.id: o.name};
 
     products = products
         .where((p) => p.matchesSearch(
               filter.searchQuery,
               categoryNames: catNames,
               vendorNames: vendorNames,
+              originNames: originNames,
             ))
         .toList();
   }
