@@ -487,7 +487,7 @@ class _BranchManagementViewState extends ConsumerState<BranchManagementView> {
                       Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
                       SizedBox(width: 4),
                       Text(
-                        'Default (ပင်မ)',
+                        'Default',
                         style: TextStyle(
                           color: Color(0xFFF59E0B),
                           fontSize: 11,
@@ -582,14 +582,15 @@ class _BranchManagementViewState extends ConsumerState<BranchManagementView> {
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.star_rounded, size: 15, color: Color(0xFFF59E0B)),
                       SizedBox(width: 4),
                       Text(
-                        'ပင်မဆိုင်ခွဲ (Default)',
+                        'Default',
                         style: TextStyle(
                           color: Color(0xFFF59E0B),
-                          fontSize: 11.5,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -600,11 +601,11 @@ class _BranchManagementViewState extends ConsumerState<BranchManagementView> {
                 TextButton.icon(
                   onPressed: () {
                     ref.read(defaultBranchProvider.notifier).setDefaultBranch(branch.id);
-                    AppToast.showSuccess('"${branch.name}" အား ပင်မဆိုင်ခွဲ (Default) အဖြစ် သတ်မှတ်လိုက်ပါပြီ');
+                    AppToast.showSuccess('"${branch.name}" is set as Default Branch');
                   },
                   icon: const Icon(Icons.star_border_rounded, size: 15, color: Color(0xFFF59E0B)),
                   label: const Text(
-                    'Default သတ်မှတ်မည်',
+                    'Set as Default',
                     style: TextStyle(
                       color: Color(0xFFF59E0B),
                       fontSize: 11.5,
@@ -620,7 +621,7 @@ class _BranchManagementViewState extends ConsumerState<BranchManagementView> {
               TextButton.icon(
                 onPressed: () => _showAddEditBranchDialog(branch: branch),
                 icon: const Icon(Icons.edit_rounded, size: 14),
-                label: const Text('ပြင်ဆင်မည် (Edit)', style: TextStyle(fontSize: 11.5)),
+                label: const Text('Edit', style: TextStyle(fontSize: 11.5)),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -631,7 +632,7 @@ class _BranchManagementViewState extends ConsumerState<BranchManagementView> {
               TextButton.icon(
                 onPressed: () => _confirmDeleteBranch(branch),
                 icon: const Icon(Icons.delete_outline_rounded, size: 14),
-                label: const Text('ဖျက်မည် (Delete)', style: TextStyle(fontSize: 11.5)),
+                label: const Text('Delete', style: TextStyle(fontSize: 11.5)),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.error,
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
