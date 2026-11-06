@@ -51,3 +51,4 @@ WHERE p.origin_id IS NULL AND (
   OR (p.origin_type = 'china_import' AND po.code = 'china_import')
   OR (p.origin_type = 'local' AND po.code = 'local')
 );
+

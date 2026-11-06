@@ -64,3 +64,4 @@ class PlantOrigin {
   @override
   int get hashCode => id.hashCode;
 }
+
