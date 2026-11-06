@@ -135,8 +135,9 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       ProductCategory.others => 'OTH',
       ProductCategory.all => 'PRD',
     };
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase();
     final randNum = (100 + Random().nextInt(900)).toString();
-    _skuCtrl.text = '$prefix-$randNum';
+    _skuCtrl.text = '$prefix-$timestamp-$randNum';
     _barcodeCtrl.text = '';
   }
 
@@ -279,7 +280,9 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       vendorName: ref.read(vendorProvider).where((v) => v.id == _selectedVendorId).firstOrNull?.name,
       imageEmoji: _selectedEmoji,
       customImagePath: _customImagePath,
-      sku: _skuCtrl.text.trim(),
+      sku: _skuCtrl.text.trim().isNotEmpty
+          ? _skuCtrl.text.trim()
+          : 'PRD-${DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase()}',
       barcode: _barcodeCtrl.text.trim().isNotEmpty ? _barcodeCtrl.text.trim() : null,
     );
 

@@ -457,6 +457,29 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
 
     await client.query('BEGIN');
 
+    // Auto-resolve SKU to guarantee uniqueness without duplicate key violations
+    let finalSku = sku && typeof sku === 'string' && sku.trim() !== '' ? sku.trim() : null;
+    if (finalSku) {
+      let isDuplicate = true;
+      let checkSku = finalSku;
+      let attempts = 0;
+      while (isDuplicate && attempts < 5) {
+        const existing = await client.query('SELECT id FROM products WHERE sku = $1 LIMIT 1', [checkSku]);
+        if (existing.rows.length === 0) {
+          isDuplicate = false;
+          finalSku = checkSku;
+        } else {
+          attempts++;
+          checkSku = `${finalSku}-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+      }
+      if (isDuplicate) {
+        finalSku = `PRD-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+      }
+    } else {
+      finalSku = `PRD-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+    }
+
     const insertSql = `
       INSERT INTO products (
         category_id, subcategory_id, vendor_id, name, sku, barcode,
@@ -471,7 +494,7 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
       resolvedSubId,
       resolvedVendorId,
       name.trim(),
-      sku || null,
+      finalSku,
       barcode || null,
       Number(costPrice) || 0,
       Number(salePrice) || 0,
