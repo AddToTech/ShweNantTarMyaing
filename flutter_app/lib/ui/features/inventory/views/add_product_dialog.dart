@@ -215,7 +215,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
         costPrice: costPrice,
         stock: firstStock,
         minStock: minStock,
-        originType: _category == ProductCategory.plants ? _originType : null,
+        originType: _originType,
         sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
         imageEmoji: _selectedEmoji,
         customImagePath: _customImagePath,
@@ -268,7 +268,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       costPrice: costPrice,
       stock: firstStock,
       minStock: minStock,
-      originType: _category == ProductCategory.plants ? _originType : null,
+      originType: _originType,
       sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
       imageEmoji: _selectedEmoji,
       customImagePath: _customImagePath,
@@ -684,60 +684,58 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Origin Selector (Plants only)
-                          if (_category == ProductCategory.plants) ...[
-                            Expanded(
-                              flex: 1,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'PLANT ORIGIN (မူရင်းဒေသ)',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.8,
+                          // Origin Selector (All Categories)
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'PLANT ORIGIN (မူရင်းဒေသ)',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceVariant,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<OriginType>(
+                                      value: _originType,
+                                      isExpanded: true,
+                                      dropdownColor: AppColors.surfaceVariant,
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: OriginType.thaiImport,
+                                          child: Text('ယိုးဒယား Import'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: OriginType.chinaImport,
+                                          child: Text('တရုတ် Import'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: OriginType.local,
+                                          child: Text('ပြည်တွင်း'),
+                                        ),
+                                      ],
+                                      onChanged: (v) {
+                                        if (v != null) setState(() => _originType = v);
+                                      },
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surfaceVariant,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: AppColors.border),
-                                    ),
-                                    child: DropdownButtonHideUnderline(
-                                      child: DropdownButton<OriginType>(
-                                        value: _originType,
-                                        isExpanded: true,
-                                        dropdownColor: AppColors.surfaceVariant,
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: OriginType.thaiImport,
-                                            child: Text('ယိုးဒယား Import'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: OriginType.chinaImport,
-                                            child: Text('တရုတ် Import'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: OriginType.local,
-                                            child: Text('ပြည်တွင်း'),
-                                          ),
-                                        ],
-                                        onChanged: (v) {
-                                          if (v != null) setState(() => _originType = v);
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                          ],
+                          ),
+                          const SizedBox(width: 12),
 
                           // Subcategory Selector
                           Expanded(
