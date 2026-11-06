@@ -389,9 +389,13 @@ class _DisburseSalaryDialogState extends ConsumerState<DisburseSalaryDialog> {
                                 const Icon(Icons.info_outline_rounded,
                                     size: 16, color: AppColors.primary),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'တာဝန်ကျ: ${kBranches[selectedEmp.branchId] ?? selectedEmp.branchId}  |  ဖုန်း: ${selectedEmp.phone ?? "မရှိပါ"}',
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                Expanded(
+                                  child: Text(
+                                    'တာဝန်ကျ: ${kBranches[selectedEmp.branchId] ?? selectedEmp.branchId}  |  ဖုန်း: ${selectedEmp.phone ?? "မရှိပါ"}',
+                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ],
                             ),

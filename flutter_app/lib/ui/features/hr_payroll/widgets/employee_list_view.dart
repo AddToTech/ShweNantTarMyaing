@@ -277,19 +277,39 @@ class EmployeeListView extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(Icons.storefront_rounded, size: 14, color: AppColors.textMuted),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      branchName,
-                                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 1),
+                                      child: Icon(Icons.storefront_rounded, size: 14, color: AppColors.textMuted),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Icon(Icons.phone_rounded, size: 14, color: AppColors.textMuted),
                                     const SizedBox(width: 4),
-                                    Text(
-                                      emp.phone ?? 'ဖုန်းမရှိပါ',
-                                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                    SizedBox(
+                                      width: 170,
+                                      child: Text(
+                                        branchName,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 11,
+                                          height: 1.25,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 1),
+                                      child: Icon(Icons.phone_rounded, size: 14, color: AppColors.textMuted),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        emp.phone ?? 'ဖုန်းမရှိပါ',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                      ),
                                     ),
                                   ],
                                 ),

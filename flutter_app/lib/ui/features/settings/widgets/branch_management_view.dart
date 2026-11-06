@@ -540,14 +540,18 @@ class _BranchManagementViewState extends ConsumerState<BranchManagementView> {
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       branch.address!,
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                      maxLines: 1,
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.25),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
