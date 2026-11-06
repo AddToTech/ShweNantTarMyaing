@@ -167,6 +167,12 @@ class _NewPurchaseTabState extends ConsumerState<_NewPurchaseTab> {
   String _filterCategoryId = 'all';
 
   @override
+  void initState() {
+    super.initState();
+    _branchId = ref.read(defaultBranchProvider);
+  }
+
+  @override
   void dispose() {
     _notesCtrl.dispose();
     _paidCtrl.dispose();
@@ -613,6 +619,10 @@ class _NewPurchaseTabState extends ConsumerState<_NewPurchaseTab> {
   Widget _buildInvoiceHeader() {
     final vendors = ref.watch(vendorProvider);
 
+    ref.listen<String>(defaultBranchProvider, (_, next) {
+      if (mounted) setState(() => _branchId = next);
+    });
+
     return Container(
       padding: const EdgeInsets.all(12),
       color: AppColors.surface,
@@ -628,6 +638,7 @@ class _NewPurchaseTabState extends ConsumerState<_NewPurchaseTab> {
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButtonFormField<String>(
+                  key: ValueKey(_branchId),
                   isExpanded: true,
                   initialValue: kBranches.containsKey(_branchId) ? _branchId : kBranches.keys.first,
                   decoration: InputDecoration(
@@ -1259,7 +1270,16 @@ class _PurchaseHistoryTabState extends ConsumerState<_PurchaseHistoryTab> {
   PurchasePaymentStatus? _statusFilter;
 
   @override
+  void initState() {
+    super.initState();
+    _branchFilter = ref.read(defaultBranchProvider);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    ref.listen<String>(defaultBranchProvider, (_, next) {
+      if (mounted) setState(() => _branchFilter = next);
+    });
     final purchaseState = ref.watch(purchaseProvider);
     final livePurchases = purchaseState.purchases;
     final liveIds = livePurchases.map((p) => p.id).toSet();

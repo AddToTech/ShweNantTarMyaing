@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/mock/mock_products.dart';
+import '../../../../data/repositories/branch_repository.dart';
 import '../../../../data/repositories/wastage_repository.dart';
 import '../../inventory/view_models/inventory_notifier.dart';
 
@@ -131,7 +132,12 @@ class WastageNotifier extends Notifier<WastageState> {
   @override
   WastageState build() {
     _loadFromRemote();
-    return const WastageState(entries: [], isLoading: true);
+    final defaultBranch = ref.watch(defaultBranchProvider);
+    return WastageState(
+      entries: [],
+      isLoading: true,
+      selectedBranchFilter: defaultBranch,
+    );
   }
 
   Future<void> loadWastage() => _loadFromRemote();

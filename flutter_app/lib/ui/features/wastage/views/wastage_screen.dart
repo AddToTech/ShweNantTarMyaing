@@ -25,6 +25,12 @@ class _WastageScreenState extends ConsumerState<WastageScreen> {
   WastageReasonOption _selectedReason = WastageReasonOption.deadWithered;
 
   @override
+  void initState() {
+    super.initState();
+    _selectedBranchId = ref.read(defaultBranchProvider);
+  }
+
+  @override
   void dispose() {
     _qtyCtrl.dispose();
     _notesCtrl.dispose();
@@ -115,6 +121,9 @@ class _WastageScreenState extends ConsumerState<WastageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String>(defaultBranchProvider, (_, next) {
+      if (mounted) setState(() => _selectedBranchId = next);
+    });
     final currencyFmt = NumberFormat('#,###');
     final wastageState = ref.watch(wastageProvider);
     final invState = ref.watch(inventoryProvider);

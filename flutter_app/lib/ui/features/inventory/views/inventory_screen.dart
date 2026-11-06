@@ -29,6 +29,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _selectedBranch = ref.read(defaultBranchProvider);
+  }
+
+  @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
@@ -188,6 +194,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String>(defaultBranchProvider, (_, next) {
+      if (mounted) setState(() => _selectedBranch = next);
+    });
     ref.watch(branchesProvider);
     final activeCategories = ref.watch(categoryNotifierProvider);
     final authState = ref.watch(authProvider);

@@ -6,6 +6,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/app_toast.dart';
+import '../../../../data/mock/mock_products.dart';
 import '../../../../data/repositories/branch_repository.dart';
 import '../../../../domain/models/product.dart';
 import '../../../shared/widgets/loading_view.dart';
@@ -341,7 +343,7 @@ class _BranchManagementViewState extends ConsumerState<BranchManagementView> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 520,
-                  mainAxisExtent: 175,
+                  mainAxisExtent: 215,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
                 ),
@@ -405,13 +407,21 @@ class _BranchManagementViewState extends ConsumerState<BranchManagementView> {
   }
 
   Widget _buildBranchCard(Branch branch) {
+    final defaultBranch = ref.watch(defaultBranchProvider);
+    final isDefault = normalizeBranchId(defaultBranch) == normalizeBranchId(branch.id) ||
+        defaultBranch == branch.id ||
+        (kBranchKeyToUuid[defaultBranch] ?? defaultBranch) == branch.id;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: branch.isActive ? AppColors.border : AppColors.border.withValues(alpha: 0.5),
+          color: isDefault
+              ? const Color(0xFFF59E0B).withValues(alpha: 0.6)
+              : (branch.isActive ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
+          width: isDefault ? 1.5 : 1.0,
         ),
       ),
       child: Column(
@@ -424,14 +434,16 @@ class _BranchManagementViewState extends ConsumerState<BranchManagementView> {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: branch.isActive
-                      ? AppColors.primary.withValues(alpha: 0.12)
-                      : Colors.grey.withValues(alpha: 0.12),
+                  color: isDefault
+                      ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
+                      : (branch.isActive
+                          ? AppColors.primary.withValues(alpha: 0.12)
+                          : Colors.grey.withValues(alpha: 0.12)),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  '🏢',
+                  isDefault ? '⭐' : '🏢',
                   style: TextStyle(
                     fontSize: 20,
                     color: branch.isActive ? null : Colors.grey,
@@ -461,6 +473,32 @@ class _BranchManagementViewState extends ConsumerState<BranchManagementView> {
                   ],
                 ),
               ),
+              if (isDefault) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
+                      SizedBox(width: 4),
+                      Text(
+                        'Default (ပင်မ)',
+                        style: TextStyle(
+                          color: Color(0xFFF59E0B),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
               // Status Badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -537,27 +575,67 @@ class _BranchManagementViewState extends ConsumerState<BranchManagementView> {
 
           Divider(height: 12, color: AppColors.border),
 
-          // Actions: Edit and Delete
+          // Actions: Set Default + Edit and Delete
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (isDefault)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.star_rounded, size: 15, color: Color(0xFFF59E0B)),
+                      SizedBox(width: 4),
+                      Text(
+                        'ပင်မဆိုင်ခွဲ (Default)',
+                        style: TextStyle(
+                          color: Color(0xFFF59E0B),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                TextButton.icon(
+                  onPressed: () {
+                    ref.read(defaultBranchProvider.notifier).setDefaultBranch(branch.id);
+                    AppToast.showSuccess('"${branch.name}" အား ပင်မဆိုင်ခွဲ (Default) အဖြစ် သတ်မှတ်လိုက်ပါပြီ');
+                  },
+                  icon: const Icon(Icons.star_border_rounded, size: 15, color: Color(0xFFF59E0B)),
+                  label: const Text(
+                    'Default သတ်မှတ်မည်',
+                    style: TextStyle(
+                      color: Color(0xFFF59E0B),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              const Spacer(),
               TextButton.icon(
                 onPressed: () => _showAddEditBranchDialog(branch: branch),
-                icon: const Icon(Icons.edit_rounded, size: 15),
-                label: const Text('ပြင်ဆင်မည် (Edit)', style: TextStyle(fontSize: 12)),
+                icon: const Icon(Icons.edit_rounded, size: 14),
+                label: const Text('ပြင်ဆင်မည် (Edit)', style: TextStyle(fontSize: 11.5)),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  visualDensity: VisualDensity.compact,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
               TextButton.icon(
                 onPressed: () => _confirmDeleteBranch(branch),
-                icon: const Icon(Icons.delete_outline_rounded, size: 15),
-                label: const Text('ဖျက်မည် (Delete)', style: TextStyle(fontSize: 12)),
+                icon: const Icon(Icons.delete_outline_rounded, size: 14),
+                label: const Text('ဖျက်မည် (Delete)', style: TextStyle(fontSize: 11.5)),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.error,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  visualDensity: VisualDensity.compact,
                 ),
               ),
             ],

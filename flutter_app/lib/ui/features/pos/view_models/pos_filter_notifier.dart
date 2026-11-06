@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/mock/mock_products.dart';
+import '../../../../data/repositories/branch_repository.dart';
 import '../../inventory/view_models/inventory_notifier.dart';
 import '../../settings/view_models/category_notifier.dart';
 
@@ -44,7 +45,10 @@ class PosFilterState {
 
 class PosFilterNotifier extends Notifier<PosFilterState> {
   @override
-  PosFilterState build() => const PosFilterState();
+  PosFilterState build() {
+    final defaultBranch = ref.watch(defaultBranchProvider);
+    return PosFilterState(selectedBranchId: defaultBranch);
+  }
 
   void selectCategory(ProductCategory cat) =>
       state = state.copyWith(

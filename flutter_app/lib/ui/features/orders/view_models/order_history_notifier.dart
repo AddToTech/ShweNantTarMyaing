@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../data/repositories/branch_repository.dart';
 import '../../../../data/repositories/sale_repository.dart';
 import '../../../../domain/models/sale_transaction.dart';
 import '../../pos/view_models/transaction_notifier.dart';
@@ -63,7 +64,10 @@ class OrderHistoryFilterState {
 
 class OrderHistoryFilterNotifier extends Notifier<OrderHistoryFilterState> {
   @override
-  OrderHistoryFilterState build() => const OrderHistoryFilterState();
+  OrderHistoryFilterState build() {
+    final defaultBranch = ref.watch(defaultBranchProvider);
+    return OrderHistoryFilterState(branchId: defaultBranch);
+  }
 
   void setDateFilter(OrderDateFilter filter) {
     state = state.copyWith(
@@ -95,7 +99,8 @@ class OrderHistoryFilterNotifier extends Notifier<OrderHistoryFilterState> {
   }
 
   void resetFilters() {
-    state = const OrderHistoryFilterState();
+    final defaultBranch = ref.read(defaultBranchProvider);
+    state = OrderHistoryFilterState(branchId: defaultBranch);
   }
 }
 

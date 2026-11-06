@@ -2,6 +2,7 @@
 
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/db/drift/app_database.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/app_toast.dart';
@@ -36,6 +37,39 @@ class BranchesNotifier extends Notifier<Map<String, String>> {
 
 final branchesProvider = NotifierProvider<BranchesNotifier, Map<String, String>>(
   BranchesNotifier.new,
+);
+
+const String kPrefDefaultBranchId = 'sitepyoe_default_branch_id';
+
+class DefaultBranchNotifier extends Notifier<String> {
+  @override
+  String build() {
+    _loadFromPrefs();
+    return 'branch_a';
+  }
+
+  Future<void> _loadFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(kPrefDefaultBranchId);
+      if (saved != null && saved.isNotEmpty) {
+        state = normalizeBranchId(saved);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> setDefaultBranch(String branchId) async {
+    final normalized = normalizeBranchId(branchId);
+    state = normalized;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(kPrefDefaultBranchId, normalized);
+    } catch (_) {}
+  }
+}
+
+final defaultBranchProvider = NotifierProvider<DefaultBranchNotifier, String>(
+  DefaultBranchNotifier.new,
 );
 
 final branchLoadingProvider = StateProvider<bool>((ref) => true);
