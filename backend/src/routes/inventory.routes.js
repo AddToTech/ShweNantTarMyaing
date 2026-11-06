@@ -13,11 +13,12 @@ router.get('/inventory/branch/:branchId', async (req, res, next) => {
         bi.id, bi.branch_id, bi.product_id, bi.stock_quantity, bi.min_alert_threshold,
         bi.last_counted_at,
         p.name AS product_name, p.sku, p.barcode, p.sale_price, p.cost_price,
-        p.origin_type, p.size_label, p.unit_of_measure, p.image_url,
+        p.origin_type, COALESCE(po.name, p.origin_type) AS origin_name, p.size_label, p.unit_of_measure, p.image_url,
         c.name AS category_name
       FROM branch_inventories bi
       JOIN products p ON bi.product_id = p.id
       JOIN categories c ON p.category_id = c.id
+      LEFT JOIN plant_origins po ON (p.origin_id = po.id OR p.origin_type = po.code OR p.origin_type = po.name)
       WHERE bi.branch_id = $1 AND p.is_active = TRUE
       ORDER BY p.created_at DESC, p.sku DESC, p.name DESC
     `;

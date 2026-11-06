@@ -237,13 +237,54 @@ const resolveCategoryUuid = async (catInput) => {
   return fallback.rows[0]?.id || null;
 };
 
+const resolveOrigin = async (orig) => {
+  if (!orig) return { code: null, id: null, name: null };
+  const s = String(orig).trim();
+  const lower = s.toLowerCase();
+
+  try {
+    const res = await query(
+      'SELECT id, name, code FROM plant_origins WHERE id::text = $1 OR code ILIKE $2 OR name ILIKE $2 LIMIT 1',
+      [UUID_REGEX.test(s) ? s : '00000000-0000-0000-0000-000000000000', s]
+    );
+    if (res.rows.length > 0) {
+      const row = res.rows[0];
+      return { code: row.code || row.name, id: row.id, name: row.name };
+    }
+  } catch (_) {}
+
+  if (lower.includes('thai')) {
+    try {
+      const r = await query("SELECT id, name, code FROM plant_origins WHERE code = 'thai_import' LIMIT 1");
+      if (r.rows.length > 0) return { code: 'thai_import', id: r.rows[0].id, name: r.rows[0].name };
+    } catch (_) {}
+    return { code: 'thai_import', id: null, name: 'ယိုးဒယား Import' };
+  }
+  if (lower.includes('china')) {
+    try {
+      const r = await query("SELECT id, name, code FROM plant_origins WHERE code = 'china_import' LIMIT 1");
+      if (r.rows.length > 0) return { code: 'china_import', id: r.rows[0].id, name: r.rows[0].name };
+    } catch (_) {}
+    return { code: 'china_import', id: null, name: 'တရုတ် Import' };
+  }
+  if (lower.includes('local')) {
+    try {
+      const r = await query("SELECT id, name, code FROM plant_origins WHERE code = 'local' LIMIT 1");
+      if (r.rows.length > 0) return { code: 'local', id: r.rows[0].id, name: r.rows[0].name };
+    } catch (_) {}
+    return { code: 'local', id: null, name: 'ပြည်တွင်း' };
+  }
+
+  return { code: s, id: null, name: s };
+};
+
 const normalizeOriginType = (orig) => {
   if (!orig) return null;
   const s = String(orig).toLowerCase();
   if (s.includes('thai')) return 'thai_import';
   if (s.includes('china')) return 'china_import';
   if (s.includes('local')) return 'local';
-  return null;
+  return String(orig).trim();
 };
 
 // GET /api/v1/products — list products with category and branch stock
@@ -258,12 +299,13 @@ router.get('/products', optionalAuth, async (req, res, next) => {
 
     let sql = `
       SELECT 
-        p.id, p.category_id, p.subcategory_id, p.vendor_id, p.name, p.sku, p.barcode,
+        p.id, p.category_id, p.subcategory_id, p.vendor_id, p.origin_id, p.name, p.sku, p.barcode,
         p.cost_price, p.sale_price, p.origin_type, p.size_label, p.unit_of_measure,
         p.attributes, p.image_url, p.is_active, p.created_at, p.updated_at,
         c.name AS category_name,
         s.name AS subcategory_name,
         v.name AS vendor_name,
+        COALESCE(po.name, p.origin_type) AS origin_name,
         COALESCE(bi.stock_quantity, 0) AS stock_quantity,
         COALESCE(bi.min_alert_threshold, 5) AS min_alert_threshold,
         (
@@ -275,6 +317,7 @@ router.get('/products', optionalAuth, async (req, res, next) => {
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
       LEFT JOIN vendors v ON p.vendor_id = v.id
+      LEFT JOIN plant_origins po ON (p.origin_id = po.id OR p.origin_type = po.code OR p.origin_type = po.name)
       LEFT JOIN branch_inventories bi ON p.id = bi.product_id ${
         targetBranchId ? 'AND bi.branch_id = $1' : ''
       }
@@ -297,11 +340,8 @@ router.get('/products', optionalAuth, async (req, res, next) => {
     }
 
     if (originType) {
-      const normOrigin = normalizeOriginType(originType);
-      if (normOrigin) {
-        params.push(normOrigin);
-        sql += ` AND p.origin_type = $${params.length}`;
-      }
+      params.push(`%${originType.trim()}%`);
+      sql += ` AND (p.origin_type ILIKE $${params.length} OR po.name ILIKE $${params.length} OR po.code ILIKE $${params.length} OR p.origin_id::text ILIKE $${params.length})`;
     }
 
     if (req.query.vendorId) {
@@ -333,18 +373,20 @@ router.get('/products/barcode/:barcode', async (req, res, next) => {
 
     const sql = `
       SELECT 
-        p.id, p.category_id, p.subcategory_id, p.vendor_id, p.name, p.sku, p.barcode,
+        p.id, p.category_id, p.subcategory_id, p.vendor_id, p.origin_id, p.name, p.sku, p.barcode,
         p.cost_price, p.sale_price, p.origin_type, p.size_label, p.unit_of_measure,
         p.attributes, p.image_url, p.is_active,
         c.name AS category_name,
         s.name AS subcategory_name,
         v.name AS vendor_name,
+        COALESCE(po.name, p.origin_type) AS origin_name,
         COALESCE(bi.stock_quantity, 0) AS stock_quantity,
         COALESCE(bi.min_alert_threshold, 5) AS min_alert_threshold
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
       LEFT JOIN vendors v ON p.vendor_id = v.id
+      LEFT JOIN plant_origins po ON (p.origin_id = po.id OR p.origin_type = po.code OR p.origin_type = po.name)
       LEFT JOIN branch_inventories bi ON p.id = bi.product_id ${
         targetBranchId ? 'AND bi.branch_id = $2' : ''
       }
@@ -377,12 +419,14 @@ router.get('/products/:id', async (req, res, next) => {
         c.name AS category_name,
         s.name AS subcategory_name,
         v.name AS vendor_name,
+        COALESCE(po.name, p.origin_type) AS origin_name,
         COALESCE(bi.stock_quantity, 0) AS stock_quantity,
         COALESCE(bi.min_alert_threshold, 5) AS min_alert_threshold
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
       LEFT JOIN vendors v ON p.vendor_id = v.id
+      LEFT JOIN plant_origins po ON (p.origin_id = po.id OR p.origin_type = po.code OR p.origin_type = po.name)
       LEFT JOIN branch_inventories bi ON p.id = bi.product_id ${
         targetBranchId ? 'AND bi.branch_id = $2' : ''
       }
@@ -438,7 +482,8 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
     }
 
     const resolvedCatId = await resolveCategoryUuid(categoryId);
-    const normOrigin = normalizeOriginType(originType);
+    const rawOrigin = req.body.originId ?? req.body.origin_id ?? originType;
+    const { code: normOrigin, id: normOriginId } = await resolveOrigin(rawOrigin);
     const targetBranchId = await resolveBranchId(branchId);
     const rawVendorId = vendorId ?? vendor_id;
     const resolvedVendorId = rawVendorId && UUID_REGEX.test(rawVendorId) ? rawVendorId : null;
@@ -482,10 +527,10 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
 
     const insertSql = `
       INSERT INTO products (
-        category_id, subcategory_id, vendor_id, name, sku, barcode,
+        category_id, subcategory_id, vendor_id, origin_id, name, sku, barcode,
         cost_price, sale_price, origin_type, size_label,
         expiry_date, unit_of_measure, attributes, image_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `;
 
@@ -493,6 +538,7 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
       resolvedCatId,
       resolvedSubId,
       resolvedVendorId,
+      normOriginId,
       name.trim(),
       finalSku,
       barcode || null,
@@ -641,9 +687,13 @@ router.patch('/products/:id', authenticate, requireRole('owner', 'manager'), asy
       values.push(Number(salePrice) || 0);
       fields.push(`sale_price = $${values.length}`);
     }
-    if (originType !== undefined) {
-      values.push(normalizeOriginType(originType));
+    if (originType !== undefined || req.body.originId !== undefined || req.body.origin_id !== undefined) {
+      const rawOrigin = req.body.originId ?? req.body.origin_id ?? originType;
+      const { code: normOrigin, id: normOriginId } = await resolveOrigin(rawOrigin);
+      values.push(normOrigin);
       fields.push(`origin_type = $${values.length}`);
+      values.push(normOriginId);
+      fields.push(`origin_id = $${values.length}`);
     }
     if (sizeLabel !== undefined) {
       values.push(sizeLabel || null);
