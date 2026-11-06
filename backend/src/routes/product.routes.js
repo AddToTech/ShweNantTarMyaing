@@ -125,14 +125,21 @@ router.patch('/categories/:id', authenticate, requireRole('owner', 'manager'), a
 router.delete('/categories/:id', authenticate, requireDeletePermission, async (req, res, next) => {
   try {
     const { id } = req.params;
-    const prodCountRes = await query('SELECT COUNT(*) FROM products WHERE category_id = $1', [id]);
-    const prodCount = parseInt(prodCountRes.rows[0].count, 10);
-    if (prodCount > 0) {
+    const activeProdRes = await query('SELECT COUNT(*) FROM products WHERE category_id = $1 AND is_active = TRUE', [id]);
+    const activeCount = parseInt(activeProdRes.rows[0].count, 10);
+    if (activeCount > 0) {
       return res.status(400).json({
         success: false,
-        message: `ဤအမျိုးအစားတွင် ပစ္စည်း (${prodCount}) မျိုး ရှိနေသောကြောင့် ဖျက်၍မရသေးပါ။ ပစ္စည်းများကို အခြားအမျိုးအစားသို့ ပြောင်းရွှေ့ခြင်း သို့မဟုတ် အရင်ဖျက်ပေးပါ။`,
+        message: `ဤအမျိုးအစားတွင် လက်ရှိအသုံးပြုနေသော ပစ္စည်း (${activeCount}) မျိုး ရှိနေသောကြောင့် ဖျက်၍မရသေးပါ။ ပစ္စည်းများကို အခြားအမျိုးအစားသို့ ပြောင်းရွှေ့ခြင်း သို့မဟုတ် အရင်ဖျက်ပေးပါ။`,
       });
     }
+
+    // Reassign any soft-deleted (inactive) products to another category so foreign key is not violated
+    const fallbackCat = await query('SELECT id FROM categories WHERE id != $1 ORDER BY sort_order ASC, name ASC LIMIT 1', [id]);
+    if (fallbackCat.rows.length > 0) {
+      await query('UPDATE products SET category_id = $1 WHERE category_id = $2', [fallbackCat.rows[0].id, id]);
+    }
+
     await query('UPDATE products SET subcategory_id = NULL WHERE subcategory_id IN (SELECT id FROM subcategories WHERE category_id = $1)', [id]);
     await query('DELETE FROM subcategories WHERE category_id = $1', [id]);
     const result = await query('DELETE FROM categories WHERE id = $1 RETURNING *', [id]);
@@ -497,6 +504,24 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
     });
   } catch (err) {
     await client.query('ROLLBACK');
+    if (err.code === '23505') {
+      if (err.constraint && err.constraint.includes('barcode')) {
+        return res.status(400).json({
+          success: false,
+          message: 'ဤ Barcode နံပါတ်သည် အခြားပစ္စည်းတစ်ခုတွင် သုံးထားပြီးဖြစ်ပါသည်။ အခြား Barcode ပြောင်းပေးပါ။',
+        });
+      }
+      if (err.constraint && err.constraint.includes('sku')) {
+        return res.status(400).json({
+          success: false,
+          message: 'ဤ SKU ကုဒ်သည် အခြားပစ္စည်းတစ်ခုတွင် သုံးထားပြီးဖြစ်ပါသည်။ အခြား SKU ပြောင်းပေးပါ။',
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'ဤအချက်အလက် (SKU သို့မဟုတ် Barcode) သည် အခြားပစ္စည်းတွင် ရှိနှင့်ပြီးဖြစ်ပါသည်',
+      });
+    }
     next(err);
   } finally {
     client.release();
@@ -630,6 +655,24 @@ router.patch('/products/:id', authenticate, requireRole('owner', 'manager'), asy
       message: 'Product updated successfully',
     });
   } catch (err) {
+    if (err.code === '23505') {
+      if (err.constraint && err.constraint.includes('barcode')) {
+        return res.status(400).json({
+          success: false,
+          message: 'ဤ Barcode နံပါတ်သည် အခြားပစ္စည်းတစ်ခုတွင် သုံးထားပြီးဖြစ်ပါသည်။ အခြား Barcode ပြောင်းပေးပါ။',
+        });
+      }
+      if (err.constraint && err.constraint.includes('sku')) {
+        return res.status(400).json({
+          success: false,
+          message: 'ဤ SKU ကုဒ်သည် အခြားပစ္စည်းတစ်ခုတွင် သုံးထားပြီးဖြစ်ပါသည်။ အခြား SKU ပြောင်းပေးပါ။',
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'ဤအချက်အလက် (SKU သို့မဟုတ် Barcode) သည် အခြားပစ္စည်းတွင် ရှိနှင့်ပြီးဖြစ်ပါသည်',
+      });
+    }
     next(err);
   }
 });
@@ -639,7 +682,13 @@ router.delete('/products/:id', authenticate, requireDeletePermission, async (req
   try {
     const { id } = req.params;
     const result = await query(
-      'UPDATE products SET is_active = FALSE, updated_at = NOW() WHERE id = $1 RETURNING id, name, is_active',
+      `UPDATE products 
+       SET is_active = FALSE,
+           sku = CASE WHEN sku IS NOT NULL THEN sku || '_del_' || EXTRACT(EPOCH FROM NOW())::bigint ELSE NULL END,
+           barcode = CASE WHEN barcode IS NOT NULL THEN barcode || '_del_' || EXTRACT(EPOCH FROM NOW())::bigint ELSE NULL END,
+           updated_at = NOW() 
+       WHERE id = $1 
+       RETURNING id, name, is_active`,
       [id]
     );
 

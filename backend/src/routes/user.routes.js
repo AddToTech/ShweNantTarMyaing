@@ -128,6 +128,7 @@ router.delete(
           message: `Cannot delete built-in permission group (${checkRes.rows[0].name})`,
         });
       }
+      await query('UPDATE users SET permission_group_id = NULL WHERE permission_group_id = $1', [id]);
       await query('DELETE FROM permission_groups WHERE id = $1', [id]);
       res.json({ success: true, message: 'Permission group deleted successfully' });
     } catch (err) {
@@ -515,10 +516,15 @@ router.delete('/users/:id', requireRole('owner'), async (req, res, next) => {
 
     await client.query('BEGIN');
     await client.query('DELETE FROM refresh_tokens WHERE user_id = $1', [id]);
-    await client.query('UPDATE sales SET cashier_id = NULL WHERE cashier_id = $1', [id]).catch(() => {});
-    await client.query('UPDATE wastage_logs SET logged_by = NULL WHERE logged_by = $1', [id]).catch(() => {});
-    await client.query('UPDATE stock_transfers SET initiated_by = NULL WHERE initiated_by = $1', [id]).catch(() => {});
-    await client.query('UPDATE stock_transfers SET received_by = NULL WHERE received_by = $1', [id]).catch(() => {});
+    await client.query('UPDATE sales SET cashier_id = NULL WHERE cashier_id = $1', [id]);
+    await client.query('UPDATE wastage_logs SET recorded_by = NULL WHERE recorded_by = $1', [id]);
+    await client.query('UPDATE branch_transfers SET initiated_by = NULL WHERE initiated_by = $1', [id]);
+    await client.query('UPDATE branch_transfers SET received_by = NULL WHERE received_by = $1', [id]);
+    await client.query('UPDATE branch_transfers SET requested_by = NULL WHERE requested_by = $1', [id]);
+    await client.query('UPDATE purchases SET created_by = NULL WHERE created_by = $1', [id]);
+    await client.query('UPDATE payrolls SET paid_by = NULL WHERE paid_by = $1', [id]);
+    await client.query('UPDATE product_batches SET received_by = NULL WHERE received_by = $1', [id]);
+    await client.query('UPDATE branch_inventories SET last_counted_by = NULL WHERE last_counted_by = $1', [id]);
 
     const result = await client.query(
       'DELETE FROM users WHERE id = $1 RETURNING id, name, email',

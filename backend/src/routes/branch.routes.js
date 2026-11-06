@@ -93,11 +93,19 @@ router.delete('/branches/:id', authenticate, requireDeletePermission, async (req
     const purchaseCheck = await query('SELECT 1 FROM purchases WHERE branch_id = $1 LIMIT 1', [id]);
     const stockCheck = await query('SELECT 1 FROM branch_inventories WHERE branch_id = $1 AND stock_quantity > 0 LIMIT 1', [id]);
     const empCheck = await query('SELECT 1 FROM employees WHERE branch_id = $1 LIMIT 1', [id]);
+    const transferCheck = await query('SELECT 1 FROM branch_transfers WHERE from_branch_id = $1 OR to_branch_id = $1 LIMIT 1', [id]);
+    const wastageCheck = await query('SELECT 1 FROM wastage_logs WHERE branch_id = $1 LIMIT 1', [id]);
+    const payrollCheck = await query('SELECT 1 FROM payrolls WHERE branch_id = $1 LIMIT 1', [id]);
+    const batchCheck = await query('SELECT 1 FROM product_batches WHERE branch_id = $1 LIMIT 1', [id]);
 
     const hasHistory = salesCheck.rows.length > 0 ||
                        purchaseCheck.rows.length > 0 ||
                        stockCheck.rows.length > 0 ||
-                       empCheck.rows.length > 0;
+                       empCheck.rows.length > 0 ||
+                       transferCheck.rows.length > 0 ||
+                       wastageCheck.rows.length > 0 ||
+                       payrollCheck.rows.length > 0 ||
+                       batchCheck.rows.length > 0;
 
     if (hasHistory) {
       // Soft-delete to preserve business integrity
@@ -108,7 +116,8 @@ router.delete('/branches/:id', authenticate, requireDeletePermission, async (req
         deactivated: true,
       });
     } else {
-      // Safe to hard delete: clean up empty branch_inventories records if any, then delete branch
+      // Safe to hard delete: clean up empty branch_inventories records if any, unlink users, then delete branch
+      await query('UPDATE users SET branch_id = NULL WHERE branch_id = $1', [id]);
       await query('DELETE FROM branch_inventories WHERE branch_id = $1', [id]);
       await query('DELETE FROM branches WHERE id = $1', [id]);
       return res.json({
