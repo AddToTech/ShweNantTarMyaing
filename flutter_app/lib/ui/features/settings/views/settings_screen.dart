@@ -8,8 +8,10 @@ import '../../auth/view_models/auth_notifier.dart';
 import '../../pos/view_models/transaction_notifier.dart';
 import '../../../shared/dialogs/server_connection_dialog.dart';
 import '../view_models/category_notifier.dart';
+import '../view_models/plant_origin_notifier.dart';
 import '../widgets/branch_management_view.dart';
 import '../widgets/category_management_view.dart';
+import '../widgets/plant_origin_management_view.dart';
 import '../widgets/user_access_management_view.dart';
 import '../../purchases/view_models/vendor_notifier.dart';
 import '../../purchases/views/vendor_management_screen.dart';
@@ -19,6 +21,7 @@ enum SettingsTab {
   categories('Categories & Subcategories', '🏷️', 'အမျိုးအစားနှင့် အုပ်စုခွဲများ စီမံခန့်ခွဲမှု'),
   branches('Shop Branches', '🏢', 'ဆိုင်ခွဲများ စီမံခန့်ခွဲမှု'),
   vendors('Vendors & Suppliers', '🤝', 'ကုန်သည်များနှင့် ပစ္စည်းထောက်ပံ့သူများ စီမံခန့်ခွဲမှု'),
+  origins('Plant Origins', '🌏', 'မူရင်းဒေသများ စီမံခန့်ခွဲမှု'),
   userManagement('User Access & Roles', '👥', 'အသုံးပြုသူနှင့် လုပ်ပိုင်ခွင့် စီမံခန့်ခွဲမှု'),
   printer('Printer & Hardware', '🖨️', 'အပူသုံးပရင်တာနှင့် စက်ကိရိယာများ');
 
@@ -387,6 +390,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     SettingsTab.categories => const CategoryManagementView(),
                     SettingsTab.branches => const BranchManagementView(),
                     SettingsTab.vendors => const VendorManagementScreen(isEmbedded: true),
+                    SettingsTab.origins => const PlantOriginManagementView(),
                     SettingsTab.userManagement => const UserAccessManagementView(),
                     SettingsTab.printer => _buildPrinterSettingsContent(),
                   },
@@ -403,6 +407,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final categories = ref.watch(categoryNotifierProvider);
     final branches = ref.watch(branchListNotifierProvider);
     final vendors = ref.watch(vendorProvider);
+    final origins = ref.watch(plantOriginProvider);
     final authState = ref.watch(authProvider);
     final currentUser = authState.currentUser;
     final totalUsers = authState.users.length;
@@ -509,6 +514,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 accentColor: const Color(0xFFF59E0B),
                 badgeText: '${vendors.length} Vendors',
                 onTap: () => setState(() => _selectedTab = SettingsTab.vendors),
+              ),
+              _buildGridCard(
+                iconEmoji: '🌏',
+                title: 'Plant Origins',
+                burmeseTitle: 'မူရင်းဒေသများ စီမံခန့်ခွဲမှု (Origins)',
+                description: 'အပင်များ၏ မူရင်းဒေသများ (ယိုးဒယား၊ တရုတ်၊ ပြည်တွင်း၊ ဗီယက်နမ် စသည်) စီမံသတ်မှတ်ခြင်း',
+                accentColor: const Color(0xFF0EA5E9),
+                badgeText: '${origins.length} Origins',
+                onTap: () => setState(() => _selectedTab = SettingsTab.origins),
               ),
               _buildGridCard(
                 iconEmoji: '👥',

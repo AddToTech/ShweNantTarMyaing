@@ -59,6 +59,8 @@ class ProductRepository {
       costPrice: (map['cost_price'] is num) ? (map['cost_price'] as num).toDouble() : double.tryParse(map['cost_price']?.toString() ?? '') ?? 0.0,
       salePrice: (map['sale_price'] is num) ? (map['sale_price'] as num).toDouble() : double.tryParse(map['sale_price']?.toString() ?? '') ?? 0.0,
       originType: _parseOriginType(map['origin_type']),
+      originId: map['origin_id']?.toString(),
+      originName: map['origin_name']?.toString() ?? map['origin_type']?.toString(),
       sizeLabel: map['size_label']?.toString(),
       expiryDate: map['expiry_date'] != null ? DateTime.tryParse(map['expiry_date'].toString()) : null,
       unitOfMeasure: map['unit_of_measure']?.toString() ?? 'piece',

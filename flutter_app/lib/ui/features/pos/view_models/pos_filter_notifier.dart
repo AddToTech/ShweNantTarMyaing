@@ -130,23 +130,32 @@ final filteredProductsProvider = Provider<List<MockProduct>>((ref) {
   // ── Sub-filter ────────────────────────────────────────────
   if (filter.selectedSubFilter != 'All' && filter.selectedSubFilter != 'အားလုံး') {
     if (filter.selectedCategory == ProductCategory.plants) {
-      if (filter.selectedSubFilter == 'Thai Import' ||
-          filter.selectedSubFilter == 'ယိုးဒယား Import') {
-        products = products
-            .where((p) => p.originType == OriginType.thaiImport)
-            .toList();
-      } else if (filter.selectedSubFilter == 'China Import' ||
-          filter.selectedSubFilter == 'တရုတ် Import') {
-        products = products
-            .where((p) => p.originType == OriginType.chinaImport)
-            .toList();
-      } else if (filter.selectedSubFilter == 'Local' ||
-          filter.selectedSubFilter == 'ပြည်တွင်း') {
-        products = products
-            .where((p) => p.originType == OriginType.local)
-            .toList();
+      final sub = filter.selectedSubFilter.trim();
+      final subLower = sub.toLowerCase();
+
+      final originMatches = products.where((p) {
+        if (p.originName != null && p.originName!.trim().toLowerCase() == subLower) {
+          return true;
+        }
+        if (p.displayOrigin != null && p.displayOrigin!.trim().toLowerCase() == subLower) {
+          return true;
+        }
+        if ((subLower.contains('thai') || subLower.contains('ယိုးဒယား')) && p.originType == OriginType.thaiImport) {
+          return true;
+        }
+        if ((subLower.contains('china') || subLower.contains('တရုတ်')) && p.originType == OriginType.chinaImport) {
+          return true;
+        }
+        if ((subLower.contains('local') || subLower.contains('ပြည်တွင်း')) && p.originType == OriginType.local) {
+          return true;
+        }
+        return false;
+      }).toList();
+
+      if (originMatches.isNotEmpty) {
+        products = originMatches;
       } else {
-        // Filter by plant subcategory: နှစ်ရှည်အလှပင်, နှစ်ရှည်အသီးပင်, Indoor ပင်, သစ်ခွ, မျိုးစေ့, အထွေထွေ
+        // Filter by plant subcategory
         products = products
             .where((p) => p.subcategory == filter.selectedSubFilter)
             .toList();

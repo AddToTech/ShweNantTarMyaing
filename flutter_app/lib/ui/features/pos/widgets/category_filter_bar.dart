@@ -5,6 +5,7 @@ import '../../../../data/mock/mock_products.dart';
 import '../view_models/pos_filter_notifier.dart';
 
 import '../../settings/view_models/category_notifier.dart';
+import '../../settings/view_models/plant_origin_notifier.dart';
 
 // ============================================================
 // CategoryFilterBar
@@ -65,12 +66,14 @@ class CategoryFilterBar extends ConsumerWidget {
             (catItem == null &&
                 filter.selectedCategory == ProductCategory.plants);
 
+    final origins = ref.watch(activePlantOriginsProvider);
+    final originNames = origins.map((o) => o.name).toList();
+
     final subFilters = isPlantsCategory
         ? [
             ...dynamicSubList,
-            if (!dynamicSubList.contains('ယိုးဒယား Import')) 'ယိုးဒယား Import',
-            if (!dynamicSubList.contains('တရုတ် Import')) 'တရုတ် Import',
-            if (!dynamicSubList.contains('ပြည်တွင်း')) 'ပြည်တွင်း',
+            for (final oName in originNames)
+              if (!dynamicSubList.contains(oName)) oName,
           ]
         : dynamicSubList;
 

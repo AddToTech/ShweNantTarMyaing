@@ -91,6 +91,8 @@ class Product {
     required this.costPrice,
     required this.salePrice,
     this.originType,       // Plants only
+    this.originId,
+    this.originName,
     this.sizeLabel,        // Plants only
     this.expiryDate,       // Chemicals only
     required this.unitOfMeasure,
@@ -107,7 +109,21 @@ class Product {
   final double costPrice;
   final double salePrice;
   final OriginType? originType;
+  final String? originId;
+  final String? originName;
   final String? sizeLabel;
+
+  String? get displayOrigin {
+    if (originName != null && originName!.trim().isNotEmpty) return originName!.trim();
+    if (originType != null) {
+      return switch (originType!) {
+        OriginType.thaiImport => 'ယိုးဒယား Import',
+        OriginType.chinaImport => 'တရုတ် Import',
+        OriginType.local => 'ပြည်တွင်း',
+      };
+    }
+    return null;
+  }
   final DateTime? expiryDate;
   final String unitOfMeasure;
   final Map<String, dynamic> attributes;

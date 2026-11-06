@@ -53,19 +53,37 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
         _                         => AppColors.catOthers,
       };
 
-  Color get _originColor => switch (widget.product.originType) {
+  Color get _originColor {
+    if (widget.product.originType != null) {
+      return switch (widget.product.originType!) {
         OriginType.thaiImport  => AppColors.originThai,
         OriginType.chinaImport => AppColors.originChina,
         OriginType.local       => AppColors.originLocal,
-        null                   => Colors.transparent,
       };
+    }
+    if (widget.product.originName != null && widget.product.originName!.isNotEmpty) {
+      final lower = widget.product.originName!.toLowerCase();
+      if (lower.contains('thai') || lower.contains('ယိုးဒယား')) return AppColors.originThai;
+      if (lower.contains('china') || lower.contains('တရုတ်')) return AppColors.originChina;
+      if (lower.contains('local') || lower.contains('ပြည်တွင်း')) return AppColors.originLocal;
+      return const Color(0xFF0EA5E9);
+    }
+    return Colors.transparent;
+  }
 
-  String get _originLabel => switch (widget.product.originType) {
+  String get _originLabel {
+    if (widget.product.originType != null) {
+      return switch (widget.product.originType!) {
         OriginType.thaiImport  => 'ယိုးဒယား',
         OriginType.chinaImport => 'တရုတ်',
         OriginType.local       => 'ပြည်တွင်း',
-        null                   => '',
       };
+    }
+    if (widget.product.originName != null && widget.product.originName!.isNotEmpty) {
+      return widget.product.originName!;
+    }
+    return '';
+  }
 
   @override
   Widget build(BuildContext context) {

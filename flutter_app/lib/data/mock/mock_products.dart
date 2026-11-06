@@ -36,6 +36,8 @@ class MockProduct {
     required this.stock,
     this.minStock = 5,
     this.originType,
+    this.originId,
+    this.originName,
     this.sizeLabel,
     this.vendorId,
     this.vendorName,
@@ -56,7 +58,16 @@ class MockProduct {
   final int stock;
   final int minStock;
   final OriginType? originType;
+  final String? originId;
+  final String? originName;
   final String? sizeLabel;
+
+  /// Returns the displayable origin label (dynamic name or legacy enum label)
+  String? get displayOrigin {
+    if (originName != null && originName!.trim().isNotEmpty) return originName!.trim();
+    if (originType != null) return originType!.burmeseLabel;
+    return null;
+  }
   final String? vendorId;
   final String? vendorName;
   final String imageEmoji;
@@ -153,7 +164,8 @@ class MockProduct {
       return true;
     }
 
-    // 6. Plant Origin (burmese, short label, english name)
+    // 6. Plant Origin (burmese, short label, english name, dynamic origin name)
+    if (originName != null && originName!.toLowerCase().contains(q)) return true;
     if (originType != null) {
       if (originType!.burmeseLabel.toLowerCase().contains(q)) return true;
       if (originType!.shortLabel.toLowerCase().contains(q)) return true;
@@ -188,6 +200,8 @@ class MockProduct {
     int? stock,
     int? minStock,
     OriginType? originType,
+    String? originId,
+    String? originName,
     String? sizeLabel,
     String? vendorId,
     String? vendorName,
@@ -209,6 +223,8 @@ class MockProduct {
       stock: stock ?? this.stock,
       minStock: minStock ?? this.minStock,
       originType: originType ?? this.originType,
+      originId: originId ?? this.originId,
+      originName: originName ?? this.originName,
       sizeLabel: sizeLabel ?? this.sizeLabel,
       vendorId: vendorId ?? this.vendorId,
       vendorName: vendorName ?? this.vendorName,
@@ -277,6 +293,9 @@ class MockProduct {
 
     final rawVendorId = (json['vendor_id'] ?? json['vendorId'])?.toString();
     final rawVendorName = (json['vendor_name'] ?? json['vendorName'])?.toString();
+    final rawOriginId = (json['origin_id'] ?? json['originId'])?.toString();
+    final rawOriginName = (json['origin_name'] ?? json['originName'])?.toString() ??
+        (json['origin_type'] != null && origStr.isNotEmpty && origin == null ? json['origin_type'].toString() : null);
 
     return MockProduct(
       id: json['id']?.toString() ?? '',
@@ -290,6 +309,8 @@ class MockProduct {
       stock: stockQty,
       minStock: minStockQty,
       originType: origin,
+      originId: rawOriginId,
+      originName: rawOriginName ?? origin?.burmeseLabel,
       sizeLabel: json['size_label']?.toString(),
       vendorId: rawVendorId,
       vendorName: rawVendorName,
@@ -309,7 +330,9 @@ class MockProduct {
     'costPrice': costPrice,
     'stock': stock,
     'minStock': minStock,
-    'originType': originType?.name,
+    'originType': originName ?? originType?.name,
+    'originId': originId,
+    'originName': originName,
     'sizeLabel': sizeLabel,
     'vendorId': vendorId,
     'vendorName': vendorName,

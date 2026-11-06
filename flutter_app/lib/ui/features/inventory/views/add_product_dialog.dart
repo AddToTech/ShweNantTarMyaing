@@ -8,6 +8,7 @@ import '../../../../data/mock/mock_products.dart';
 import '../../../../data/repositories/branch_repository.dart';
 import '../../../shared/widgets/product_avatar.dart';
 import '../../settings/view_models/category_notifier.dart';
+import '../../settings/view_models/plant_origin_notifier.dart';
 import '../../purchases/view_models/vendor_notifier.dart';
 import '../view_models/inventory_notifier.dart';
 
@@ -61,7 +62,9 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
   ProductCategory _category = ProductCategory.plants;
   String? _selectedCategoryId;
   String? _selectedCategoryName;
-  OriginType _originType = OriginType.thaiImport;
+  String? _selectedOriginId;
+  String? _selectedOriginName;
+  OriginType? _originType = OriginType.thaiImport;
   String _subcategory = 'အထွေထွေ';
   String? _selectedVendorId;
   String _selectedEmoji = '🪴';
@@ -95,7 +98,9 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       _category = p.category;
       _selectedCategoryId = p.categoryId;
       _selectedCategoryName = p.categoryName;
-      _originType = p.originType ?? OriginType.thaiImport;
+      _originType = p.originType;
+      _selectedOriginId = p.originId;
+      _selectedOriginName = p.originName ?? p.originType?.burmeseLabel ?? 'ယိုးဒယား Import';
       _subcategory = p.subcategory.isNotEmpty ? p.subcategory : 'အထွေထွေ';
       _selectedVendorId = p.vendorId;
       _selectedEmoji = p.imageEmoji;
@@ -225,6 +230,8 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
           stock: firstStock,
           minStock: minStock,
           originType: _originType,
+          originId: _selectedOriginId,
+          originName: _selectedOriginName,
           sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
           vendorId: _selectedVendorId,
           vendorName: ref.read(vendorProvider).where((v) => v.id == _selectedVendorId).firstOrNull?.name,
@@ -280,6 +287,8 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
         stock: firstStock,
         minStock: minStock,
         originType: _originType,
+        originId: _selectedOriginId,
+        originName: _selectedOriginName,
         sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
         vendorId: _selectedVendorId,
         vendorName: ref.read(vendorProvider).where((v) => v.id == _selectedVendorId).firstOrNull?.name,
@@ -325,6 +334,92 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
         setState(() => _isSaving = false);
       }
     }
+  }
+
+  void _showQuickAddOriginDialog(BuildContext context) {
+    final textCtrl = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.public_rounded, color: AppColors.primary, size: 22),
+            SizedBox(width: 10),
+            Text(
+              'မူရင်းဒေသ အသစ်ထည့်မည်',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'မူရင်းဒေသ အမည် (ဥပမာ - ဗီယက်နမ် Import၊ တောင်ကြီး)',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: textCtrl,
+              autofocus: true,
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'မူရင်းဒေသ ရိုက်ထည့်ပါ...',
+                filled: true,
+                fillColor: AppColors.surfaceVariant,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: AppColors.border),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('မလုပ်တော့ပါ',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              final name = textCtrl.text.trim();
+              if (name.isEmpty) return;
+              Navigator.of(ctx).pop();
+              final created = await ref
+                  .read(plantOriginProvider.notifier)
+                  .addOrigin(name: name);
+              if (created != null && mounted) {
+                setState(() {
+                  _selectedOriginName = created.name;
+                  _selectedOriginId = created.id;
+                  final lower = created.name.toLowerCase();
+                  if (lower.contains('thai') || lower.contains('ယိုးဒယား')) {
+                    _originType = OriginType.thaiImport;
+                  } else if (lower.contains('china') || lower.contains('တရုတ်')) {
+                    _originType = OriginType.chinaImport;
+                  } else if (lower.contains('local') || lower.contains('ပြည်တွင်း')) {
+                    _originType = OriginType.local;
+                  } else {
+                    _originType = null;
+                  }
+                });
+              }
+            },
+            child: const Text('ထည့်သွင်းမည်'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -719,47 +814,92 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'PLANT ORIGIN (မူရင်းဒေသ)',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.8,
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'PLANT ORIGIN (မူရင်းဒေသ)',
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    InkWell(
+                                      onTap: () => _showQuickAddOriginDialog(context),
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.add_circle_outline_rounded, size: 13, color: AppColors.primary),
+                                            SizedBox(width: 3),
+                                            Text(
+                                              'အသစ်ထည့်',
+                                              style: TextStyle(color: AppColors.primary, fontSize: 10.5, fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surfaceVariant,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: AppColors.border),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<OriginType>(
-                                      value: _originType,
-                                      isExpanded: true,
-                                      dropdownColor: AppColors.surfaceVariant,
-                                      items: const [
-                                        DropdownMenuItem(
-                                          value: OriginType.thaiImport,
-                                          child: Text('ယိုးဒယား Import'),
+                                Builder(
+                                  builder: (context) {
+                                    final origins = ref.watch(activePlantOriginsProvider);
+                                    final currentName = origins.any((o) => o.name == _selectedOriginName)
+                                        ? _selectedOriginName
+                                        : (origins.isNotEmpty ? origins.first.name : null);
+
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceVariant,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: AppColors.border),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String?>(
+                                          value: currentName,
+                                          isExpanded: true,
+                                          dropdownColor: AppColors.surfaceVariant,
+                                          items: [
+                                            ...origins.map((o) {
+                                              return DropdownMenuItem<String?>(
+                                                value: o.name,
+                                                child: Text(
+                                                  o.name,
+                                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              );
+                                            }),
+                                          ],
+                                          onChanged: (val) {
+                                            if (val != null) {
+                                              setState(() {
+                                                _selectedOriginName = val;
+                                                final matched = origins.where((o) => o.name == val).firstOrNull;
+                                                _selectedOriginId = matched?.id;
+                                                final lower = val.toLowerCase();
+                                                if (lower.contains('thai') || lower.contains('ယိုးဒယား')) {
+                                                  _originType = OriginType.thaiImport;
+                                                } else if (lower.contains('china') || lower.contains('တရုတ်')) {
+                                                  _originType = OriginType.chinaImport;
+                                                } else if (lower.contains('local') || lower.contains('ပြည်တွင်း')) {
+                                                  _originType = OriginType.local;
+                                                } else {
+                                                  _originType = null;
+                                                }
+                                              });
+                                            }
+                                          },
                                         ),
-                                        DropdownMenuItem(
-                                          value: OriginType.chinaImport,
-                                          child: Text('တရုတ် Import'),
-                                        ),
-                                        DropdownMenuItem(
-                                          value: OriginType.local,
-                                          child: Text('ပြည်တွင်း'),
-                                        ),
-                                      ],
-                                      onChanged: (v) {
-                                        if (v != null) setState(() => _originType = v);
-                                      },
-                                    ),
-                                  ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ],
                             ),

@@ -599,7 +599,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                           ),
                                         ),
                                       ),
-                                      if (p.originType != null) ...[
+                                      if (p.displayOrigin != null && p.displayOrigin!.isNotEmpty) ...[
                                         const SizedBox(width: 8),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -608,11 +608,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: Text(
-                                            p.originType == OriginType.thaiImport
-                                                ? 'ယိုးဒယား Import'
-                                                : p.originType == OriginType.chinaImport
-                                                    ? 'တရုတ် Import'
-                                                    : 'ပြည်တွင်း',
+                                            p.displayOrigin!,
                                             style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
                                           ),
                                         ),
