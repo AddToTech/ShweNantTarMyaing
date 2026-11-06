@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../data/mock/mock_products.dart';
+import '../../settings/view_models/plant_origin_notifier.dart';
 
 /// Stock record for a specific product at a specific branch
 class BranchStock {
@@ -269,6 +270,7 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
       }
 
       await loadProducts();
+      ref.read(plantOriginProvider.notifier).loadOrigins();
       return true;
     } catch (_) {
       return false;
@@ -320,6 +322,7 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
       }
 
       await loadProducts();
+      ref.read(plantOriginProvider.notifier).loadOrigins();
       return true;
     } catch (_) {
       return false;
@@ -333,6 +336,7 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
       final client = ref.read(apiClientProvider);
       await client.delete('/products/$productId');
       state = state.where((p) => p.id != productId).toList();
+      ref.read(plantOriginProvider.notifier).loadOrigins();
       return true;
     } catch (_) {
       return false;

@@ -11,7 +11,7 @@ router.get('/plant-origins', optionalAuth, async (req, res, next) => {
 
     let sql = `
       SELECT po.*,
-             COUNT(p.id)::int AS product_count
+             COUNT(p.id) FILTER (WHERE p.is_active = TRUE)::int AS product_count
       FROM plant_origins po
       LEFT JOIN products p ON (p.origin_id = po.id OR p.origin_type = po.code OR p.origin_type = po.name)
       WHERE 1=1
@@ -138,7 +138,7 @@ router.delete('/plant-origins/:id', optionalAuth, async (req, res, next) => {
       SELECT COUNT(*)::int AS count 
       FROM products p
       JOIN plant_origins po ON (p.origin_id = po.id OR p.origin_type = po.code OR p.origin_type = po.name)
-      WHERE po.id = $1
+      WHERE po.id = $1 AND p.is_active = TRUE
     `;
     const checkRes = await query(checkSql, [id]);
     const inUse = checkRes.rows[0]?.count > 0;

@@ -25,6 +25,14 @@ class _PlantOriginManagementViewState
   bool _showInactive = true;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(plantOriginProvider.notifier).loadOrigins();
+    });
+  }
+
+  @override
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
