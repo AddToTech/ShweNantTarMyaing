@@ -258,11 +258,12 @@ router.get('/products', optionalAuth, async (req, res, next) => {
 
     let sql = `
       SELECT 
-        p.id, p.category_id, p.subcategory_id, p.name, p.sku, p.barcode,
+        p.id, p.category_id, p.subcategory_id, p.vendor_id, p.name, p.sku, p.barcode,
         p.cost_price, p.sale_price, p.origin_type, p.size_label, p.unit_of_measure,
         p.attributes, p.image_url, p.is_active, p.created_at, p.updated_at,
         c.name AS category_name,
         s.name AS subcategory_name,
+        v.name AS vendor_name,
         COALESCE(bi.stock_quantity, 0) AS stock_quantity,
         COALESCE(bi.min_alert_threshold, 5) AS min_alert_threshold,
         (
@@ -273,6 +274,7 @@ router.get('/products', optionalAuth, async (req, res, next) => {
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
+      LEFT JOIN vendors v ON p.vendor_id = v.id
       LEFT JOIN branch_inventories bi ON p.id = bi.product_id ${
         targetBranchId ? 'AND bi.branch_id = $1' : ''
       }
@@ -302,6 +304,11 @@ router.get('/products', optionalAuth, async (req, res, next) => {
       }
     }
 
+    if (req.query.vendorId) {
+      params.push(req.query.vendorId);
+      sql += ` AND p.vendor_id = $${params.length}`;
+    }
+
     if (search) {
       params.push(`%${search}%`);
       sql += ` AND (p.name ILIKE $${params.length} OR p.sku ILIKE $${params.length} OR p.barcode ILIKE $${params.length})`;
@@ -326,16 +333,18 @@ router.get('/products/barcode/:barcode', async (req, res, next) => {
 
     const sql = `
       SELECT 
-        p.id, p.category_id, p.subcategory_id, p.name, p.sku, p.barcode,
+        p.id, p.category_id, p.subcategory_id, p.vendor_id, p.name, p.sku, p.barcode,
         p.cost_price, p.sale_price, p.origin_type, p.size_label, p.unit_of_measure,
         p.attributes, p.image_url, p.is_active,
         c.name AS category_name,
         s.name AS subcategory_name,
+        v.name AS vendor_name,
         COALESCE(bi.stock_quantity, 0) AS stock_quantity,
         COALESCE(bi.min_alert_threshold, 5) AS min_alert_threshold
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
+      LEFT JOIN vendors v ON p.vendor_id = v.id
       LEFT JOIN branch_inventories bi ON p.id = bi.product_id ${
         targetBranchId ? 'AND bi.branch_id = $2' : ''
       }
@@ -367,11 +376,13 @@ router.get('/products/:id', async (req, res, next) => {
         p.*,
         c.name AS category_name,
         s.name AS subcategory_name,
+        v.name AS vendor_name,
         COALESCE(bi.stock_quantity, 0) AS stock_quantity,
         COALESCE(bi.min_alert_threshold, 5) AS min_alert_threshold
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
+      LEFT JOIN vendors v ON p.vendor_id = v.id
       LEFT JOIN branch_inventories bi ON p.id = bi.product_id ${
         targetBranchId ? 'AND bi.branch_id = $2' : ''
       }
@@ -406,6 +417,8 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
       salePrice = 0,
       originType,
       sizeLabel,
+      vendorId,
+      vendor_id,
       expiryDate,
       unitOfMeasure = 'piece',
       attributes = {},
@@ -427,6 +440,8 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
     const resolvedCatId = await resolveCategoryUuid(categoryId);
     const normOrigin = normalizeOriginType(originType);
     const targetBranchId = await resolveBranchId(branchId);
+    const rawVendorId = vendorId ?? vendor_id;
+    const resolvedVendorId = rawVendorId && UUID_REGEX.test(rawVendorId) ? rawVendorId : null;
 
     let resolvedSubId = subcategoryId && UUID_REGEX.test(subcategoryId) ? subcategoryId : null;
     if (!resolvedSubId && (subcategory || subcategoryId)) {
@@ -444,16 +459,17 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
 
     const insertSql = `
       INSERT INTO products (
-        category_id, subcategory_id, name, sku, barcode,
+        category_id, subcategory_id, vendor_id, name, sku, barcode,
         cost_price, sale_price, origin_type, size_label,
         expiry_date, unit_of_measure, attributes, image_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `;
 
     const prodRes = await client.query(insertSql, [
       resolvedCatId,
       resolvedSubId,
+      resolvedVendorId,
       name.trim(),
       sku || null,
       barcode || null,
@@ -609,6 +625,12 @@ router.patch('/products/:id', authenticate, requireRole('owner', 'manager'), asy
     if (sizeLabel !== undefined) {
       values.push(sizeLabel || null);
       fields.push(`size_label = $${values.length}`);
+    }
+    if (req.body.vendorId !== undefined || req.body.vendor_id !== undefined) {
+      const rawVendor = req.body.vendorId ?? req.body.vendor_id;
+      const resolvedVendor = rawVendor && UUID_REGEX.test(rawVendor) ? rawVendor : null;
+      values.push(resolvedVendor);
+      fields.push(`vendor_id = $${values.length}`);
     }
     if (expiryDate !== undefined) {
       values.push(expiryDate || null);

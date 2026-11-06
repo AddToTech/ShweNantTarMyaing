@@ -242,6 +242,7 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
         'salePrice': product.salePrice,
         'originType': product.originType?.name,
         'sizeLabel': product.sizeLabel,
+        'vendorId': product.vendorId,
         'initialStock': firstStock,
         'branchId': firstBranchId,
         'branchStocks': finalStocks,
@@ -293,6 +294,7 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
         'salePrice': updated.salePrice,
         'sizeLabel': updated.sizeLabel,
         'originType': updated.originType?.name,
+        'vendorId': updated.vendorId,
         'attributes': {
           'imageEmoji': updated.imageEmoji,
           if (updated.customImagePath != null) 'customImagePath': updated.customImagePath,

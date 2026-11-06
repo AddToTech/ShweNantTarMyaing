@@ -145,6 +145,14 @@ if (process.env.NODE_ENV !== 'test') {
       )
       .catch((err) => console.error('Migration notice (products_subcategory_id_fkey):', err.message));
 
+    // Ensure products table has vendor_id column referencing vendors table
+    await pool
+      .query(
+        `ALTER TABLE products ADD COLUMN IF NOT EXISTS vendor_id UUID REFERENCES vendors(id) ON DELETE SET NULL;
+         CREATE INDEX IF NOT EXISTS idx_products_vendor ON products(vendor_id);`
+      )
+      .catch((err) => console.error('Migration notice (products_vendor_id):', err.message));
+
     // Ensure categories table supports burmese_name and emoji dynamically
     await pool
       .query(

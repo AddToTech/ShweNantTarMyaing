@@ -136,6 +136,7 @@ CREATE TABLE products (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   category_id      UUID NOT NULL REFERENCES categories(id),
   subcategory_id   UUID REFERENCES subcategories(id) ON DELETE SET NULL,
+  vendor_id        UUID REFERENCES vendors(id) ON DELETE SET NULL,
 
   name             VARCHAR(200) NOT NULL,
   sku              VARCHAR(60)  UNIQUE,

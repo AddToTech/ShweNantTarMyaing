@@ -8,6 +8,7 @@ import '../../../../data/mock/mock_products.dart';
 import '../../../../data/repositories/branch_repository.dart';
 import '../../../shared/widgets/product_avatar.dart';
 import '../../settings/view_models/category_notifier.dart';
+import '../../purchases/view_models/vendor_notifier.dart';
 import '../view_models/inventory_notifier.dart';
 
 class AddProductDialog extends ConsumerStatefulWidget {
@@ -62,6 +63,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
   String? _selectedCategoryName;
   OriginType _originType = OriginType.thaiImport;
   String _subcategory = 'အထွေထွေ';
+  String? _selectedVendorId;
   String _selectedEmoji = '🪴';
   String? _customImagePath;
 
@@ -94,6 +96,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       _selectedCategoryName = p.categoryName;
       _originType = p.originType ?? OriginType.thaiImport;
       _subcategory = p.subcategory.isNotEmpty ? p.subcategory : 'အထွေထွေ';
+      _selectedVendorId = p.vendorId;
       _selectedEmoji = p.imageEmoji;
       _customImagePath = p.customImagePath;
 
@@ -217,6 +220,8 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
         minStock: minStock,
         originType: _originType,
         sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
+        vendorId: _selectedVendorId,
+        vendorName: ref.read(vendorProvider).where((v) => v.id == _selectedVendorId).firstOrNull?.name,
         imageEmoji: _selectedEmoji,
         customImagePath: _customImagePath,
         clearCustomImage: _customImagePath == null,
@@ -270,6 +275,8 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       minStock: minStock,
       originType: _originType,
       sizeLabel: _sizeLabelCtrl.text.trim().isNotEmpty ? _sizeLabelCtrl.text.trim() : null,
+      vendorId: _selectedVendorId,
+      vendorName: ref.read(vendorProvider).where((v) => v.id == _selectedVendorId).firstOrNull?.name,
       imageEmoji: _selectedEmoji,
       customImagePath: _customImagePath,
       sku: _skuCtrl.text.trim(),
@@ -777,6 +784,78 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                                           }).toList(),
                                           onChanged: (v) {
                                             if (v != null) setState(() => _subcategory = v);
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(width: 12),
+
+                          // Vendor Selector
+                          Expanded(
+                            flex: 1,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'VENDOR (ကုန်သည် / ဆိုင်)',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Builder(
+                                  builder: (context) {
+                                    final vendors = ref.watch(activeVendorsProvider);
+                                    final currentVendorId = vendors.any((v) => v.id == _selectedVendorId)
+                                        ? _selectedVendorId
+                                        : null;
+
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceVariant,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: AppColors.border),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String?>(
+                                          value: currentVendorId,
+                                          isExpanded: true,
+                                          dropdownColor: AppColors.surfaceVariant,
+                                          hint: Text(
+                                            'မရွေးချယ်ပါ (None)',
+                                            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                                          ),
+                                          items: [
+                                            DropdownMenuItem<String?>(
+                                              value: null,
+                                              child: Text(
+                                                'မရွေးချယ်ပါ (None)',
+                                                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                                              ),
+                                            ),
+                                            ...vendors.map((v) {
+                                              return DropdownMenuItem<String?>(
+                                                value: v.id,
+                                                child: Text(
+                                                  v.name,
+                                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              );
+                                            }),
+                                          ],
+                                          onChanged: (v) {
+                                            setState(() => _selectedVendorId = v);
                                           },
                                         ),
                                       ),

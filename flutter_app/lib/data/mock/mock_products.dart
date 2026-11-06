@@ -36,6 +36,8 @@ class MockProduct {
     this.minStock = 5,
     this.originType,
     this.sizeLabel,
+    this.vendorId,
+    this.vendorName,
     this.imageEmoji = '🌿',
     this.customImagePath,
     this.sku = '',
@@ -54,6 +56,8 @@ class MockProduct {
   final int minStock;
   final OriginType? originType;
   final String? sizeLabel;
+  final String? vendorId;
+  final String? vendorName;
   final String imageEmoji;
   final String? customImagePath;
   final String sku;
@@ -123,6 +127,8 @@ class MockProduct {
     int? minStock,
     OriginType? originType,
     String? sizeLabel,
+    String? vendorId,
+    String? vendorName,
     String? imageEmoji,
     String? customImagePath,
     bool clearCustomImage = false,
@@ -142,6 +148,8 @@ class MockProduct {
       minStock: minStock ?? this.minStock,
       originType: originType ?? this.originType,
       sizeLabel: sizeLabel ?? this.sizeLabel,
+      vendorId: vendorId ?? this.vendorId,
+      vendorName: vendorName ?? this.vendorName,
       imageEmoji: imageEmoji ?? this.imageEmoji,
       customImagePath: clearCustomImage ? null : (customImagePath ?? this.customImagePath),
       sku: sku ?? this.sku,
@@ -205,6 +213,9 @@ class MockProduct {
         ? (json['min_alert_threshold'] as num).toInt()
         : double.tryParse(json['min_alert_threshold']?.toString() ?? '')?.toInt() ?? 5;
 
+    final rawVendorId = (json['vendor_id'] ?? json['vendorId'])?.toString();
+    final rawVendorName = (json['vendor_name'] ?? json['vendorName'])?.toString();
+
     return MockProduct(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
@@ -218,6 +229,8 @@ class MockProduct {
       minStock: minStockQty,
       originType: origin,
       sizeLabel: json['size_label']?.toString(),
+      vendorId: rawVendorId,
+      vendorName: rawVendorName,
       imageEmoji: emoji,
       customImagePath: imagePath,
       sku: json['sku']?.toString() ?? '',
@@ -236,6 +249,8 @@ class MockProduct {
     'minStock': minStock,
     'originType': originType?.name,
     'sizeLabel': sizeLabel,
+    'vendorId': vendorId,
+    'vendorName': vendorName,
     'imageEmoji': imageEmoji,
     'customImagePath': customImagePath,
     'sku': sku,
