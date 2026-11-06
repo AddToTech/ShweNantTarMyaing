@@ -134,7 +134,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
     };
     final randNum = (100 + Random().nextInt(900)).toString();
     _skuCtrl.text = '$prefix-$randNum';
-    _barcodeCtrl.text = '885${Random().nextInt(90000000) + 10000000}';
+    _barcodeCtrl.text = '';
   }
 
   List<String> _getSubcategories(ProductCategory category) {
@@ -687,7 +687,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                           // Origin Selector (Plants only)
                           if (_category == ProductCategory.plants) ...[
                             Expanded(
-                              flex: 3,
+                              flex: 1,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -741,7 +741,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
 
                           // Subcategory Selector
                           Expanded(
-                            flex: 4,
+                            flex: 1,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -784,43 +784,6 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                                       ),
                                     );
                                   },
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          // Size Label (optional)
-                          Expanded(
-                            flex: 3,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'SIZE / SPEC (အရွယ်အစား)',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.8,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: _sizeLabelCtrl,
-                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
-                                  decoration: InputDecoration(
-                                    hintText: 'e.g. 6 inch / 500ml',
-                                    hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12),
-                                    filled: true,
-                                    fillColor: AppColors.surfaceVariant,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide(color: AppColors.border),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                  ),
                                 ),
                               ],
                             ),
@@ -954,77 +917,6 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                             ),
                           ],
                         ),
-                      ),
-
-                      const SizedBox(height: 18),
-
-                      // ── SKU & Barcode Row ─────────────────────────────
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'SKU CODE',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.8,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: _skuCtrl,
-                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
-                                  decoration: InputDecoration(
-                                    hintText: 'e.g. PLT-015',
-                                    filled: true,
-                                    fillColor: AppColors.surfaceVariant,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(color: AppColors.border),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'BARCODE (ဘားကုဒ်)',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.8,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: _barcodeCtrl,
-                                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
-                                  decoration: InputDecoration(
-                                    hintText: 'e.g. 885000100015',
-                                    filled: true,
-                                    fillColor: AppColors.surfaceVariant,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(color: AppColors.border),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
                       ),
 
                       const SizedBox(height: 18),
