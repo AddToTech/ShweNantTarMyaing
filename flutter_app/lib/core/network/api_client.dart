@@ -83,6 +83,27 @@ class ApiClient {
     return null;
   }
 
+  String _formatNetworkErrorMessage(dynamic error, Uri uri, [Uri? fallbackUri]) {
+    final errStr = error.toString().toLowerCase();
+    if (errStr.contains('network is unreachable') ||
+        errStr.contains('errno = 101') ||
+        errStr.contains('network is down') ||
+        errStr.contains('no route to host')) {
+      return 'အင်တာနက် ချိတ်ဆက်မှု မရှိသေးပါ (စက်တွင် Wi-Fi သို့မဟုတ် Mobile Data ဖွင့်ထားခြင်း ရှိ/မရှိ စစ်ဆေးပေးပါ)';
+    }
+    if (errStr.contains('failed host lookup') ||
+        errStr.contains('no address associated with hostname')) {
+      return 'အင်တာနက် ချိတ်ဆက်၍ မရပါ (DNS ရှာမတွေ့ပါ၊ Wi-Fi ချိတ်ဆက်မှုကို စစ်ဆေးပါ)';
+    }
+    if (errStr.contains('connection refused') || errStr.contains('errno = 111')) {
+      return 'ဆာဗာ ယာယီပိတ်ထားပါသည် (Server connection refused)';
+    }
+    if (fallbackUri != null) {
+      return 'ဆာဗာချိတ်ဆက်၍ မရပါ (Host unreachable: ${uri.host}, ${fallbackUri.host})';
+    }
+    return 'ဆာဗာချိတ်ဆက်၍ မရပါ (${uri.host}): $error';
+  }
+
   /// Central request executor with HttpLogger, proactive token validation, silent 401 refresh, and Android fallback
   Future<dynamic> _executeRequest({
     required String method,
@@ -140,7 +161,7 @@ class ApiClient {
             debugPrint('[ApiClient] ✅ Fallback host succeeded! Saved base URL: $newBase');
           } catch (retryErr, retrySt) {
             HttpLogger.logError(method: method, uri: fallbackUri, error: retryErr, duration: retrySw.elapsed, stackTrace: retrySt);
-            final errMsg = 'ဆာဗာချိတ်ဆက်၍ မရပါ (Host unreachable: $uri, $fallbackUri): $retryErr';
+            final errMsg = _formatNetworkErrorMessage(retryErr, uri, fallbackUri);
             if (!suppressErrorToast) {
               AppToast.showError(errMsg, endpoint: '$method $endpoint');
             }
@@ -150,7 +171,7 @@ class ApiClient {
             );
           }
         } else {
-          final errMsg = 'ဆာဗာချိတ်ဆက်၍ မရပါ ($uri): $e';
+          final errMsg = _formatNetworkErrorMessage(e, uri);
           if (!suppressErrorToast) {
             AppToast.showError(errMsg, endpoint: '$method $endpoint');
           }
@@ -166,7 +187,7 @@ class ApiClient {
         }
         throw timeoutEx;
       } else {
-        final errMsg = 'ဆာဗာချိတ်ဆက်၍ မရပါ ($uri): $e';
+        final errMsg = _formatNetworkErrorMessage(e, uri);
         if (!suppressErrorToast) {
           AppToast.showError(errMsg, endpoint: '$method $endpoint');
         }

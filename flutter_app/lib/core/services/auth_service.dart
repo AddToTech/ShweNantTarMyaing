@@ -174,8 +174,15 @@ class AuthService extends ChangeNotifier {
             debugPrint('[AuthService] ✅ Fallback host succeeded! Saved base URL: $newBase');
           } catch (retryErr, retrySt) {
             HttpLogger.logError(method: 'POST', uri: fallbackUri, error: retryErr, duration: retrySw.elapsed, stackTrace: retrySt);
+            final errStr = retryErr.toString().toLowerCase();
+            final msg = (errStr.contains('network is unreachable') ||
+                    errStr.contains('errno = 101') ||
+                    errStr.contains('network is down') ||
+                    errStr.contains('failed host lookup'))
+                ? 'အင်တာနက် ချိတ်ဆက်မှု မရှိသေးပါ (စက်တွင် Wi-Fi သို့မဟုတ် Mobile Data ဖွင့်ထားခြင်း ရှိ/မရှိ စစ်ဆေးပေးပါ)'
+                : 'ဆာဗာချိတ်ဆက်၍ မရပါ (${uri.host}): $retryErr';
             throw NetworkException(
-              message: 'ဆာဗာချိတ်ဆက်၍ မရပါ (Host unreachable: $uri, $fallbackUri): $retryErr',
+              message: msg,
               details: retryErr.toString(),
             );
           }

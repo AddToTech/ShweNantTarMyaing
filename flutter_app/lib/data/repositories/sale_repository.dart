@@ -269,7 +269,11 @@ class SaleRepository {
         'limit': limit,
       };
 
-      final data = await _apiClient.get('/sales', queryParams: queryParams);
+      final data = await _apiClient.get(
+        '/sales',
+        queryParams: queryParams,
+        suppressErrorToast: true,
+      );
       if (data is List) {
         list.addAll(data.map((json) => _saleFromMap(json as Map<String, dynamic>)));
       }
