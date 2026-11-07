@@ -816,22 +816,26 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      'PLANT ORIGIN (မူရင်းဒေသ)',
-                                      style: TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.8,
+                                    Expanded(
+                                      child: Text(
+                                        'PLANT ORIGIN (မူရင်းဒေသ)',
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.8,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    const Spacer(),
+                                    const SizedBox(width: 4),
                                     InkWell(
                                       onTap: () => _showQuickAddOriginDialog(context),
                                       borderRadius: BorderRadius.circular(4),
                                       child: const Padding(
                                         padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                         child: Row(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Icon(Icons.add_circle_outline_rounded, size: 13, color: AppColors.primary),
                                             SizedBox(width: 3),
@@ -1184,7 +1188,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                                 final invStock = widget.isEditing
                                     ? ref.read(inventoryProvider).getStock(branch.id, widget.productToEdit?.id ?? '')
                                     : null;
-                                final defaultStock = invStock ?? (branchItems.indexOf(branch) == 0 ? 10 : 5);
+                                final defaultStock = invStock ?? 0;
                                 return TextEditingController(text: defaultStock.toString());
                               },
                             );
