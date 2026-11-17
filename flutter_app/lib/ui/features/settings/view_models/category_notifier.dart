@@ -212,6 +212,23 @@ class CategoryNotifier extends Notifier<List<CategoryItem>> {
     }
   }
 
+  /// Persist a new display order for categories (used by POS category tabs).
+  /// Applies optimistically and rolls back if the server call fails.
+  Future<bool> reorderCategories(List<CategoryItem> newOrder) async {
+    final previous = state;
+    state = List<CategoryItem>.unmodifiable(newOrder);
+    try {
+      final client = ref.read(apiClientProvider);
+      await client.patch('/categories/reorder', body: {
+        'order': newOrder.map((c) => c.id).toList(),
+      });
+      return true;
+    } catch (_) {
+      state = previous;
+      return false;
+    }
+  }
+
   /// Delete a category by ID
   Future<bool> deleteCategory(String id) async {
     try {

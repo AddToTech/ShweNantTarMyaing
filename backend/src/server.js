@@ -54,7 +54,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Health check
-app.get('/health', async (req, res) => {
+app.get(['/health', '/api/v1/health'], async (req, res) => {
   try {
     await pool.query('SELECT 1');
     res.json({

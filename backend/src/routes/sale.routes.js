@@ -398,7 +398,7 @@ router.delete('/sales/:id', authenticate, requireDeletePermission, async (req, r
       data: { id: sale.id, receiptNo: sale.receipt_no },
     });
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
+    await client.query('ROLLBACK').catch(() => { });
     next(err);
   } finally {
     client.release();

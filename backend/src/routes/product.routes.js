@@ -64,20 +64,56 @@ router.get('/categories', async (req, res, next) => {
 // POST /api/v1/categories — create category
 router.post('/categories', authenticate, requireRole('owner', 'manager'), async (req, res, next) => {
   try {
-    const { name, burmeseName, emoji = '🏷️', sortOrder = 0 } = req.body;
+    const { name, burmeseName, emoji = '🏷️', sortOrder } = req.body;
     const primaryName = (name && name.trim()) || (burmeseName && burmeseName.trim());
     if (!primaryName) {
       return res.status(400).json({ success: false, message: 'Category name is required' });
     }
     const cleanBurmese = (burmeseName && burmeseName.trim()) || primaryName;
     const cleanEmoji = (emoji && String(emoji).trim()) || '🏷️';
+    let finalSort = Number(sortOrder);
+    if (sortOrder === undefined || sortOrder === null || Number.isNaN(finalSort) || finalSort <= 0) {
+      const maxRes = await query('SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM categories');
+      finalSort = Number(maxRes.rows[0].next) || 1;
+    }
     const result = await query(
       'INSERT INTO categories (name, burmese_name, emoji, sort_order) VALUES ($1, $2, $3, $4) RETURNING *',
-      [primaryName, cleanBurmese, cleanEmoji, Number(sortOrder) || 0]
+      [primaryName, cleanBurmese, cleanEmoji, finalSort]
     );
     res.status(201).json({ success: true, data: { ...result.rows[0], subcategories: [] } });
   } catch (err) {
     next(err);
+  }
+});
+
+// PATCH /api/v1/categories/reorder — bulk update category display order
+// NOTE: must stay registered BEFORE `/categories/:id` so "reorder" isn't treated as an id.
+// Body: { order: [categoryId1, categoryId2, ...] }  (index = new sort_order)
+router.patch('/categories/reorder', authenticate, requireRole('owner', 'manager'), async (req, res, next) => {
+  const { order } = req.body || {};
+  if (!Array.isArray(order) || order.length === 0) {
+    return res.status(400).json({ success: false, message: 'order must be a non-empty array of category ids' });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (let i = 0; i < order.length; i++) {
+      await client.query(
+        'UPDATE categories SET sort_order = $1, updated_at = NOW() WHERE id = $2',
+        [i + 1, String(order[i])]
+      );
+    }
+    await client.query('COMMIT');
+    const result = await query(
+      `SELECT id, name, COALESCE(burmese_name, name) AS burmese_name, COALESCE(emoji, '🏷️') AS emoji, sort_order
+       FROM categories ORDER BY sort_order ASC, created_at ASC`
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    next(err);
+  } finally {
+    client.release();
   }
 });
 

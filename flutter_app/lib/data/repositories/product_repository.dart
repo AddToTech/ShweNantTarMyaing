@@ -110,7 +110,9 @@ class ProductRepository {
       }
     } catch (_) {
       // Local cache fallback
-      final cachedCats = await _db.select(_db.categoriesCache).get();
+      final cachedCats = await (_db.select(_db.categoriesCache)
+            ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+          .get();
       if (cachedCats.isNotEmpty) {
         final cachedSubs = await _db.select(_db.subcategoriesCache).get();
         return cachedCats.map((c) {

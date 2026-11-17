@@ -192,6 +192,14 @@ class _CategoryManagementViewState
     );
   }
 
+  void _showReorderDialog() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _CategoryReorderDialog(),
+    );
+  }
+
   void _confirmResetDefaults() {
     showDialog<void>(
       context: context,
@@ -393,6 +401,15 @@ class _CategoryManagementViewState
                                 ),
                                 Row(
                                   children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.swap_vert_rounded,
+                                          size: 20, color: AppColors.primary),
+                                      tooltip:
+                                          'POS တွင် ပြသမည့် အစဉ် စီမည် (Sort Order)',
+                                      onPressed: categories.length < 2
+                                          ? null
+                                          : _showReorderDialog,
+                                    ),
                                     IconButton(
                                       icon: Icon(Icons.restore_rounded,
                                           size: 18, color: AppColors.textMuted),
@@ -1461,6 +1478,276 @@ class _AddEditSubcategoryDialogState
                             ),
                           )
                         : Text(isEdit ? 'သိမ်းဆည်းမည်' : 'ထည့်မည်'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// Category Reorder Dialog (controls POS category tab order)
+// ============================================================
+
+class _CategoryReorderDialog extends ConsumerStatefulWidget {
+  const _CategoryReorderDialog();
+
+  @override
+  ConsumerState<_CategoryReorderDialog> createState() =>
+      _CategoryReorderDialogState();
+}
+
+class _CategoryReorderDialogState
+    extends ConsumerState<_CategoryReorderDialog> {
+  late List<CategoryItem> _items;
+  bool _isSaving = false;
+  bool _changed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _items = List<CategoryItem>.of(ref.read(categoryNotifierProvider));
+  }
+
+  void _move(int from, int to) {
+    if (to < 0 || to >= _items.length || from == to) return;
+    setState(() {
+      final item = _items.removeAt(from);
+      _items.insert(to, item);
+      _changed = true;
+    });
+  }
+
+  Future<void> _save() async {
+    setState(() => _isSaving = true);
+    final ok = await ref
+        .read(categoryNotifierProvider.notifier)
+        .reorderCategories(_items);
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+    if (ok) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('အမျိုးအစား အစဉ်ကို သိမ်းဆည်းပြီးပါပြီ (POS တွင် ဤအစဉ်အတိုင်း ပြသပါမည်)'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('အစဉ် သိမ်းဆည်း၍ မအောင်မြင်ပါ။ အင်တာနက် ချိတ်ဆက်မှုကို စစ်ဆေးပြီး ထပ်ကြိုးစားပါ။'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 640),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.swap_vert_rounded,
+                        color: AppColors.primary, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'အမျိုးအစား အစဉ်စီရန်',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '⠿ ကိုဖိဆွဲ၍ သို့မဟုတ် ▲▼ ဖြင့် ရွှေ့ပါ။ POS အရောင်းစာမျက်နှာတွင် ဤအစဉ်အတိုင်း ပြသပါမည်။',
+                          style: TextStyle(
+                              color: AppColors.textMuted, fontSize: 11.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              // Fixed "All" tab preview
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.push_pin_rounded,
+                        size: 16, color: AppColors.textMuted),
+                    const SizedBox(width: 10),
+                    const Text('🌿', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'အားလုံး (All) — အမြဲ ရှေ့ဆုံး',
+                        style: TextStyle(
+                            color: AppColors.textMuted, fontSize: 12.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ReorderableListView.builder(
+                  shrinkWrap: true,
+                  buildDefaultDragHandles: false,
+                  itemCount: _items.length,
+                  onReorder: (oldIndex, newIndex) {
+                    if (newIndex > oldIndex) newIndex -= 1;
+                    _move(oldIndex, newIndex);
+                  },
+                  proxyDecorator: (child, _, __) => Material(
+                    color: Colors.transparent,
+                    elevation: 6,
+                    borderRadius: BorderRadius.circular(10),
+                    child: child,
+                  ),
+                  itemBuilder: (context, index) {
+                    final cat = _items[index];
+                    final label = cat.englishName.isNotEmpty &&
+                            cat.englishName.toLowerCase() !=
+                                cat.name.toLowerCase()
+                        ? '${cat.name} (${cat.englishName})'
+                        : cat.name;
+                    return Padding(
+                      key: ValueKey('reorder_${cat.id}'),
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            ReorderableDragStartListener(
+                              index: index,
+                              child: Padding(
+                                padding: const EdgeInsets.all(6),
+                                child: Icon(Icons.drag_indicator_rounded,
+                                    color: AppColors.textMuted, size: 20),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 22,
+                              child: Text(
+                                '${index + 1}',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(cat.emoji,
+                                style: const TextStyle(fontSize: 18)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                label,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.keyboard_arrow_up_rounded,
+                                  size: 20),
+                              color: AppColors.textSecondary,
+                              tooltip: 'အပေါ်သို့',
+                              onPressed: index == 0 || _isSaving
+                                  ? null
+                                  : () => _move(index, index - 1),
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 20),
+                              color: AppColors.textSecondary,
+                              tooltip: 'အောက်သို့',
+                              onPressed:
+                                  index == _items.length - 1 || _isSaving
+                                      ? null
+                                      : () => _move(index, index + 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed:
+                        _isSaving ? null : () => Navigator.of(context).pop(),
+                    child: Text('မလုပ်တော့ပါ (Cancel)',
+                        style: TextStyle(color: AppColors.textMuted)),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: (_isSaving || !_changed) ? null : _save,
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.check_rounded, size: 18),
+                    label: const Text('အစဉ် သိမ်းမည် (Save)'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.textOnPrimary,
+                    ),
                   ),
                 ],
               ),
