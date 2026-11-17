@@ -13,6 +13,27 @@ class AppConstants {
   static const String appVersion = '1.5.0';
 
   // ── API ─────────────────────────────────────────────────
+  /// True if [path] points to an HTTP(S) URL or a backend `/uploads/...` asset.
+  static bool isRemoteMediaPath(String? path) {
+    if (path == null) return false;
+    final p = path.trim();
+    return p.startsWith('http://') ||
+        p.startsWith('https://') ||
+        p.startsWith('/uploads/') ||
+        p.startsWith('uploads/');
+  }
+
+  /// Resolves a relative backend media path (e.g. '/uploads/products/x.jpg')
+  /// into an absolute URL against the active server origin.
+  static String resolveMediaUrl(String path) {
+    final trimmed = path.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    final normalized = trimmed.startsWith('/') ? trimmed : '/$trimmed';
+    return Uri.parse(apiBaseUrl).resolve(normalized).toString();
+  }
+
   /// Permanent Production Cloud Server URL for ShweNantTarMyaing
   static const String productionApiBaseUrl = 'https://sntm.addtotechmm.com/api/v1';
 

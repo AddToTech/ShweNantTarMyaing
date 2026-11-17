@@ -279,7 +279,11 @@ class MockProduct {
     }
 
     final emoji = attrs['imageEmoji']?.toString() ?? '🌿';
-    final imagePath = json['image_url']?.toString() ?? attrs['customImagePath']?.toString();
+    final rawImgUrl = json['image_url']?.toString().trim();
+    final rawAttrImg = attrs['customImagePath']?.toString().trim();
+    final imagePath = (rawImgUrl != null && rawImgUrl.isNotEmpty)
+        ? rawImgUrl
+        : (rawAttrImg != null && rawAttrImg.isNotEmpty ? rawAttrImg : null);
 
     // 4. Resolve numbers
     final cost = (json['cost_price'] is num)

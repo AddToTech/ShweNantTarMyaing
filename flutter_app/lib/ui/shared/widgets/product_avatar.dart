@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_constants.dart';
 
 /// Reusable widget for rendering a product's visual representation.
 /// Displays a custom device/gallery image when available,
@@ -34,14 +35,17 @@ class ProductAvatar extends StatelessWidget {
 
     if (customImagePath != null && customImagePath!.trim().isNotEmpty) {
       final path = customImagePath!.trim();
+      final cacheWidth = w.isFinite ? (w * 2).round().clamp(64, 800) : 600;
       Widget imageWidget;
 
-      if (path.startsWith('http://') || path.startsWith('https://')) {
+      if (AppConstants.isRemoteMediaPath(path)) {
+        final resolvedUrl = AppConstants.resolveMediaUrl(path);
         imageWidget = Image.network(
-          path,
+          resolvedUrl,
           width: w,
           height: h,
           fit: fit,
+          cacheWidth: cacheWidth,
           errorBuilder: (_, __, ___) => _buildEmojiFallback(w, h),
         );
       } else if (path.startsWith('assets/')) {
@@ -60,15 +64,20 @@ class ProductAvatar extends StatelessWidget {
             width: w,
             height: h,
             fit: fit,
+            cacheWidth: cacheWidth,
             errorBuilder: (_, __, ___) => _buildEmojiFallback(w, h),
           );
         } else {
           final file = File(path);
+          if (!file.existsSync()) {
+            return _buildEmojiFallback(w, h);
+          }
           imageWidget = Image.file(
             file,
             width: w,
             height: h,
             fit: fit,
+            cacheWidth: cacheWidth,
             errorBuilder: (_, __, ___) => _buildEmojiFallback(w, h),
           );
         }

@@ -179,9 +179,9 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 80,
       );
       if (pickedFile != null) {
         setState(() {

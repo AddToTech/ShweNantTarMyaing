@@ -1,4 +1,7 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../data/mock/mock_products.dart';
 import '../../settings/view_models/plant_origin_notifier.dart';
@@ -211,6 +214,32 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
     }
   }
 
+  bool _isLocalUploadableImage(String? path) {
+    if (kIsWeb || path == null) return false;
+    final p = path.trim();
+    if (p.isEmpty || AppConstants.isRemoteMediaPath(p) || p.startsWith('assets/')) {
+      return false;
+    }
+    return File(p).existsSync();
+  }
+
+  Future<void> _uploadProductImageIfPresent(
+    ApiClient client,
+    String productId,
+    String? imagePath,
+  ) async {
+    if (!_isLocalUploadableImage(imagePath)) return;
+    try {
+      await client.multipartPost(
+        '/products/$productId/image',
+        fileFieldName: 'image',
+        filePath: imagePath!.trim(),
+      );
+    } catch (_) {
+      // ApiClient.multipartPost already triggers AppToast on failure.
+    }
+  }
+
   /// Adds a new product to the catalog and seeds its initial branch stocks sequentially (LIFO).
   /// Returns true only if the backend API call succeeds.
   Future<bool> addProduct(
@@ -232,6 +261,9 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
 
       final firstBranchId = finalStocks.keys.firstOrNull ?? 'branch_a';
       final firstStock = finalStocks[firstBranchId] ?? 0;
+      final rawImagePath = product.customImagePath?.trim();
+      final isRemoteImage = AppConstants.isRemoteMediaPath(rawImagePath);
+      final isAssetImage = rawImagePath != null && rawImagePath.startsWith('assets/');
 
       final created = await client.post('/products', body: {
         'categoryId': product.categoryId ?? product.categoryName ?? product.category.name,
@@ -248,15 +280,20 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
         'initialStock': firstStock,
         'branchId': firstBranchId,
         'branchStocks': finalStocks,
+        if (isRemoteImage) 'imageUrl': rawImagePath,
         'attributes': {
           'imageEmoji': product.imageEmoji,
-          if (product.customImagePath != null) 'customImagePath': product.customImagePath,
+          if (isAssetImage) 'customImagePath': rawImagePath,
         },
       });
 
       final createdId = (created is Map && created['id'] != null)
           ? created['id'].toString()
           : product.sku;
+
+      if (created is Map && created['id'] != null) {
+        await _uploadProductImageIfPresent(client, createdId, rawImagePath);
+      }
 
       for (final entry in finalStocks.entries) {
         if (entry.key == firstBranchId) continue;
@@ -287,6 +324,14 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
   }) async {
     try {
       final client = ref.read(apiClientProvider);
+      final rawImagePath = updated.customImagePath?.trim();
+      final isCleared = rawImagePath == null || rawImagePath.isEmpty;
+      final isRemote = AppConstants.isRemoteMediaPath(rawImagePath);
+      final isAsset = rawImagePath != null && rawImagePath.startsWith('assets/');
+      final isLocalExisting = _isLocalUploadableImage(rawImagePath);
+      final isUnresolvableLegacyPath =
+          !isCleared && !isRemote && !isAsset && !isLocalExisting;
+
       await client.patch('/products/${updated.id}', body: {
         'categoryId': updated.categoryId ?? updated.categoryName ?? updated.category.name,
         'subcategory': updated.subcategory,
@@ -299,11 +344,17 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
         'originType': updated.originName ?? updated.originType?.name,
         'originId': updated.originId,
         'vendorId': updated.vendorId,
+        if (isCleared || isAsset) 'imageUrl': null,
+        if (isRemote) 'imageUrl': rawImagePath,
         'attributes': {
           'imageEmoji': updated.imageEmoji,
-          if (updated.customImagePath != null) 'customImagePath': updated.customImagePath,
+          if (isAsset || isUnresolvableLegacyPath) 'customImagePath': rawImagePath,
         },
       });
+
+      if (isLocalExisting) {
+        await _uploadProductImageIfPresent(client, updated.id, rawImagePath);
+      }
 
       final finalStocks = Map<String, int>.from(branchStocks);
       if (stockBranchA != null && !finalStocks.containsKey('branch_a')) {

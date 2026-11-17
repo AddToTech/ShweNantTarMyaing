@@ -18,7 +18,13 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
+    let ext = path.extname(file.originalname).toLowerCase();
+    if (!ext) {
+      if (file.mimetype === 'image/png') ext = '.png';
+      else if (file.mimetype === 'image/webp') ext = '.webp';
+      else if (file.mimetype === 'image/gif') ext = '.gif';
+      else ext = '.jpg';
+    }
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     cb(null, `prod-${uniqueSuffix}${ext}`);
   },
@@ -28,15 +34,29 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
   fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|webp|gif/;
+    const allowedExt = /^(jpeg|jpg|png|webp|gif)$/;
     const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
-    const mime = file.mimetype;
-    if (allowed.test(ext) && (mime.startsWith('image/') || allowed.test(mime))) {
+    const mime = (file.mimetype || '').toLowerCase();
+    const isImageMime = mime.startsWith('image/');
+    // Dart http.MultipartFile.fromPath defaults to application/octet-stream when contentType is omitted
+    const isOctetWithValidExt = mime === 'application/octet-stream' && allowedExt.test(ext);
+    if ((isImageMime && (ext === '' || allowedExt.test(ext))) || isOctetWithValidExt) {
       return cb(null, true);
     }
-    cb(new Error('Only image files (JPEG, PNG, WebP) are allowed'));
+    const err = new Error('Only image files (JPEG, PNG, WebP) are allowed');
+    err.status = 400;
+    cb(err);
   },
 });
+
+function removeOldUpload(oldUrl) {
+  if (!oldUrl || typeof oldUrl !== 'string') return;
+  if (!oldUrl.startsWith('/uploads/products/')) return;
+  const filename = path.basename(oldUrl);
+  if (!filename || filename === '.' || filename === '..') return;
+  const fullPath = path.join(uploadDir, filename);
+  fs.unlink(fullPath, () => {});
+}
 
 // GET /api/v1/categories — get all categories with subcategories
 router.get('/categories', async (req, res, next) => {
@@ -753,7 +773,12 @@ router.patch('/products/:id', authenticate, requireRole('owner', 'manager'), asy
       values.push(JSON.stringify(attributes));
       fields.push(`attributes = $${values.length}`);
     }
+    let oldImageToDelete = null;
     if (imageUrl !== undefined) {
+      if (!imageUrl) {
+        const cur = await query('SELECT image_url FROM products WHERE id = $1', [id]);
+        oldImageToDelete = cur.rows[0]?.image_url || null;
+      }
       values.push(imageUrl || null);
       fields.push(`image_url = $${values.length}`);
     }
@@ -778,6 +803,10 @@ router.patch('/products/:id', authenticate, requireRole('owner', 'manager'), asy
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    if (oldImageToDelete) {
+      removeOldUpload(oldImageToDelete);
     }
 
     res.json({
@@ -850,17 +879,26 @@ router.post(
         return res.status(400).json({ success: false, message: 'No image file uploaded' });
       }
 
-      const imageUrl = `/uploads/products/${req.file.filename}`;
+      const existing = await query('SELECT id, image_url FROM products WHERE id = $1', [id]);
+      if (existing.rows.length === 0) {
+        fs.unlink(req.file.path, () => {});
+        return res.status(404).json({ success: false, message: 'Product not found' });
+      }
 
+      const imageUrl = `/uploads/products/${req.file.filename}`;
       const result = await query(
-        'UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name, image_url',
+        `UPDATE products
+         SET image_url = $1,
+             attributes = COALESCE(attributes, '{}'::jsonb) - 'customImagePath',
+             updated_at = NOW()
+         WHERE id = $2
+         RETURNING id, name, image_url`,
         [imageUrl, id]
       );
 
-      if (result.rows.length === 0) {
-        // Remove uploaded file if product not found
-        fs.unlinkSync(req.file.path);
-        return res.status(404).json({ success: false, message: 'Product not found' });
+      const oldUrl = existing.rows[0].image_url;
+      if (oldUrl && oldUrl !== imageUrl) {
+        removeOldUpload(oldUrl);
       }
 
       res.json({
@@ -869,6 +907,7 @@ router.post(
         message: 'Product image uploaded successfully',
       });
     } catch (err) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
       next(err);
     }
   }
