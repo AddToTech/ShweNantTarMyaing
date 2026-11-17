@@ -262,13 +262,18 @@ class _UserAccessManagementViewState
         children: [
           // ── Sub-Tab Switcher & Top Action Button ─────────────────
           Container(
+            width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.border),
             ),
-            child: Row(
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 10,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 // Sub-tab switcher
                 Container(
@@ -277,67 +282,70 @@ class _UserAccessManagementViewState
                     color: AppColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Row(
-                    children: UserSubTab.values.map((tab) {
-                      final isSel = _currentSubTab == tab;
-                      return GestureDetector(
-                        onTap: () => setState(() => _currentSubTab = tab),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: isSel ? AppColors.primary : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              Text(tab.icon, style: const TextStyle(fontSize: 14)),
-                              const SizedBox(width: 8),
-                              Text(
-                                tab.title,
-                                style: TextStyle(
-                                  color: isSel
-                                      ? AppColors.textOnPrimary
-                                      : AppColors.textSecondary,
-                                  fontSize: 12.5,
-                                  fontWeight: isSel
-                                      ? FontWeight.bold
-                                      : FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 1.5),
-                                decoration: BoxDecoration(
-                                  color: isSel
-                                      ? Colors.white.withValues(alpha: 0.25)
-                                      : AppColors.surface,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  tab == UserSubTab.users
-                                      ? '${authState.users.length}'
-                                      : '${permissionGroups.length}',
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: UserSubTab.values.map((tab) {
+                        final isSel = _currentSubTab == tab;
+                        return GestureDetector(
+                          onTap: () => setState(() => _currentSubTab = tab),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: isSel ? AppColors.primary : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(tab.icon, style: const TextStyle(fontSize: 14)),
+                                const SizedBox(width: 8),
+                                Text(
+                                  tab.title,
                                   style: TextStyle(
                                     color: isSel
-                                        ? Colors.white
-                                        : AppColors.textMuted,
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.bold,
+                                        ? AppColors.textOnPrimary
+                                        : AppColors.textSecondary,
+                                    fontSize: 12.5,
+                                    fontWeight: isSel
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: isSel
+                                        ? Colors.white.withValues(alpha: 0.25)
+                                        : AppColors.surface,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    tab == UserSubTab.users
+                                        ? '${authState.users.length}'
+                                        : '${permissionGroups.length}',
+                                    style: TextStyle(
+                                      color: isSel
+                                          ? Colors.white
+                                          : AppColors.textMuted,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }).toList(),
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
-
-                const Spacer(),
 
                 // Contextual Action Button
                 if (isSuperAdmin) ...[
@@ -363,6 +371,7 @@ class _UserAccessManagementViewState
                     )
                   else
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
                           icon: Icon(Icons.restore_rounded,
@@ -371,23 +380,26 @@ class _UserAccessManagementViewState
                           onPressed: _confirmResetGroupsDefaults,
                         ),
                         const SizedBox(width: 6),
-                        ElevatedButton.icon(
-                          onPressed: () => _showAddEditGroupDialog(),
-                          icon: const Icon(Icons.add_moderator_rounded,
-                              size: 17),
-                          label: const Text(
-                            '+ Add Permission Group (လုပ်ပိုင်ခွင့်အုပ်စု အသစ်)',
-                            style: TextStyle(
-                                fontSize: 12.5, fontWeight: FontWeight.bold),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.textOnPrimary,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
+                        Flexible(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showAddEditGroupDialog(),
+                            icon: const Icon(Icons.add_moderator_rounded,
+                                size: 17),
+                            label: const Text(
+                              '+ Add Permission Group (လုပ်ပိုင်ခွင့်အုပ်စု အသစ်)',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 12.5, fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.textOnPrimary,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
                           ),
                         ),
                       ],
@@ -671,6 +683,7 @@ class _UserAccessManagementViewState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               // Avatar with role icon
                               Container(
@@ -690,13 +703,16 @@ class _UserAccessManagementViewState
 
                               const SizedBox(width: 14),
 
-                              // Name & contact
+                              // Name & contact (wraps badge cleanly without squeezing Edit button)
                               Expanded(
-                                flex: 3,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
                                       children: [
                                         Text(
                                           u.name,
@@ -706,8 +722,7 @@ class _UserAccessManagementViewState
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                        if (isCurrentActiveUser) ...[
-                                          const SizedBox(width: 8),
+                                        if (isCurrentActiveUser)
                                           Container(
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 6, vertical: 2),
@@ -726,12 +741,12 @@ class _UserAccessManagementViewState
                                               ),
                                             ),
                                           ),
-                                        ],
                                       ],
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '${u.email}  •  ${u.phone ?? 'No phone'}',
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                           color: AppColors.textSecondary,
                                           fontSize: 11.5),
@@ -740,113 +755,9 @@ class _UserAccessManagementViewState
                                 ),
                               ),
 
-                              // Role Chip
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 9, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceVariant,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      u.role.label,
-                                      style: TextStyle(
-                                        color: AppColors.textPrimary,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    Text(
-                                      u.role.burmeseLabel,
-                                      style: const TextStyle(
-                                          color: AppColors.primary,
-                                          fontSize: 9.5),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              const SizedBox(width: 10),
 
-                              const SizedBox(width: 12),
-
-                              // Permission Group Pill
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary
-                                      .withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: AppColors.primary
-                                          .withValues(alpha: 0.35)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(assignedGroup?.icon ?? '🛡️',
-                                        style: const TextStyle(fontSize: 13)),
-                                    const SizedBox(width: 6),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          assignedGroup?.name ?? 'Standard Role',
-                                          style: const TextStyle(
-                                            color: AppColors.primary,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          assignedGroup?.burmeseName ??
-                                              'လုပ်ပိုင်ခွင့်အုပ်စု',
-                                          style: TextStyle(
-                                            color: AppColors.textSecondary,
-                                            fontSize: 9,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(width: 12),
-
-                              // Branch Assignment Badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.background,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.storefront_outlined,
-                                        size: 14, color: AppColors.textMuted),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      branchLabel,
-                                      style: TextStyle(
-                                          color: AppColors.textSecondary,
-                                          fontSize: 11),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(width: 14),
-
-                              // Active Toggle
+                              // Active Toggle + Edit/Delete Actions pinned top-right
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -880,29 +791,149 @@ class _UserAccessManagementViewState
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
+                                  if (isSuperAdmin) ...[
+                                    const SizedBox(width: 6),
+                                    IconButton(
+                                      icon: Icon(Icons.edit_outlined,
+                                          size: 18,
+                                          color: AppColors.textSecondary),
+                                      tooltip: 'Edit user & permissions',
+                                      onPressed: () =>
+                                          _showAddEditUserDialog(user: u),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                          Icons.delete_outline_rounded,
+                                          size: 18,
+                                          color: AppColors.error),
+                                      tooltip: 'Delete user',
+                                      onPressed: isCurrentActiveUser
+                                          ? null
+                                          : () => _confirmDeleteUser(u),
+                                    ),
+                                  ],
                                 ],
                               ),
+                            ],
+                          ),
 
-                              const SizedBox(width: 10),
+                          const SizedBox(height: 10),
 
-                              // Actions
-                              if (isSuperAdmin) ...[
-                                IconButton(
-                                  icon: Icon(Icons.edit_outlined,
-                                      size: 17, color: AppColors.textSecondary),
-                                  tooltip: 'Edit user & permissions',
-                                  onPressed: () =>
-                                      _showAddEditUserDialog(user: u),
+                          // Role, Permission Group & Branch Metadata Pills (wrap cleanly on any tablet width)
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              // Role Chip
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceVariant,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: AppColors.border),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline_rounded,
-                                      size: 17, color: AppColors.error),
-                                  tooltip: 'Delete user',
-                                  onPressed: isCurrentActiveUser
-                                      ? null
-                                      : () => _confirmDeleteUser(u),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      u.role.label,
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Text(
+                                      u.role.burmeseLabel,
+                                      style: const TextStyle(
+                                          color: AppColors.primary,
+                                          fontSize: 9.5),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
+
+                              // Permission Group Pill
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary
+                                      .withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: AppColors.primary
+                                          .withValues(alpha: 0.35)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(assignedGroup?.icon ?? '🛡️',
+                                        style: const TextStyle(fontSize: 13)),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            assignedGroup?.name ??
+                                                'Standard Role',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: AppColors.primary,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          Text(
+                                            assignedGroup?.burmeseName ??
+                                                'လုပ်ပိုင်ခွင့်အုပ်စု',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 9,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Branch Assignment Badge
+                              Container(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 340),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.storefront_outlined,
+                                        size: 14, color: AppColors.textMuted),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        branchLabel,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                            color: AppColors.textSecondary,
+                                            fontSize: 11),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
 
@@ -910,6 +941,7 @@ class _UserAccessManagementViewState
 
                           // Left Side Menu Permissions Badges Bar
                           Container(
+                            width: double.infinity,
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
@@ -917,7 +949,10 @@ class _UserAccessManagementViewState
                                   .withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Row(
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text(
                                   'ဘယ်ဘက် Menu သုံးစွဲခွင့်များ: ',
@@ -926,12 +961,7 @@ class _UserAccessManagementViewState
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold),
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Wrap(
-                                    spacing: 6,
-                                    runSpacing: 4,
-                                    children: AppMenuPermission.values.map((perm) {
+                                ...AppMenuPermission.values.map((perm) {
                                       final isGranted =
                                           allowedMenus.contains(perm);
                                       return Container(
@@ -983,9 +1013,7 @@ class _UserAccessManagementViewState
                                           ],
                                         ),
                                       );
-                                    }).toList(),
-                                  ),
-                                ),
+                                    }),
                               ],
                             ),
                           ),
@@ -1032,10 +1060,10 @@ class _UserAccessManagementViewState
             const SizedBox(width: 14),
             _buildMetricCard(
               icon: '👑',
-              title: 'Full Access (All 7 Menus)',
+              title: 'Full Access (${AppMenuPermission.values.length} Perms)',
               burmese: 'မီနူးအားလုံး သုံးစွဲခွင့်ရှိသူ',
               count:
-                  '${permissionGroups.where((g) => g.permissions.length == 7).length} Groups',
+                  '${permissionGroups.where((g) => g.permissions.length >= AppMenuPermission.values.length).length} Groups',
               color: Colors.amber,
             ),
             const SizedBox(width: 14),
@@ -1191,7 +1219,11 @@ class _UserAccessManagementViewState
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
                                       children: [
                                         Text(
                                           grp.name,
@@ -1201,7 +1233,6 @@ class _UserAccessManagementViewState
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
                                         Text(
                                           '(${grp.burmeseName})',
                                           style: const TextStyle(
@@ -1210,7 +1241,6 @@ class _UserAccessManagementViewState
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
-                                        const SizedBox(width: 10),
                                         if (grp.isBuiltIn)
                                           Container(
                                             padding: const EdgeInsets.symmetric(
@@ -1262,46 +1292,55 @@ class _UserAccessManagementViewState
                                   ],
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceVariant,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.people_outline_rounded,
-                                        size: 15, color: AppColors.textMuted),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '$assignedUsersCount Staff',
-                                      style: TextStyle(
-                                          color: AppColors.textPrimary,
-                                          fontSize: 11.5,
-                                          fontWeight: FontWeight.bold),
+                              const SizedBox(width: 10),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surfaceVariant,
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                  ],
-                                ),
-                              ),
-                              if (isSuperAdmin) ...[
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: Icon(Icons.edit_outlined,
-                                      size: 17, color: AppColors.textSecondary),
-                                  tooltip: 'လုပ်ပိုင်ခွင့်များ ပြင်ဆင်မည်',
-                                  onPressed: () =>
-                                      _showAddEditGroupDialog(group: grp),
-                                ),
-                                if (!grp.isBuiltIn)
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline_rounded,
-                                        size: 17, color: AppColors.error),
-                                    tooltip: 'အုပ်စု ဖျက်မည်',
-                                    onPressed: () => _confirmDeleteGroup(grp),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.people_outline_rounded,
+                                            size: 15, color: AppColors.textMuted),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '$assignedUsersCount Staff',
+                                          style: TextStyle(
+                                              color: AppColors.textPrimary,
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                              ],
+                                  if (isSuperAdmin) ...[
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      icon: Icon(Icons.edit_outlined,
+                                          size: 18,
+                                          color: AppColors.textSecondary),
+                                      tooltip: 'လုပ်ပိုင်ခွင့်များ ပြင်ဆင်မည်',
+                                      onPressed: () =>
+                                          _showAddEditGroupDialog(group: grp),
+                                    ),
+                                    if (!grp.isBuiltIn)
+                                      IconButton(
+                                        icon: const Icon(
+                                            Icons.delete_outline_rounded,
+                                            size: 18,
+                                            color: AppColors.error),
+                                        tooltip: 'အုပ်စု ဖျက်မည်',
+                                        onPressed: () => _confirmDeleteGroup(grp),
+                                      ),
+                                  ],
+                                ],
+                              ),
                             ],
                           ),
 
@@ -1320,14 +1359,17 @@ class _UserAccessManagementViewState
                               children: [
                                 Row(
                                   children: [
-                                    Text(
-                                      'ဘယ်ဘက် Navigation Menu သုံးစွဲခွင့် အခြေအနေ (Permissions):',
-                                      style: TextStyle(
-                                          color: AppColors.textPrimary,
-                                          fontSize: 11.5,
-                                          fontWeight: FontWeight.bold),
+                                    Expanded(
+                                      child: Text(
+                                        'ဘယ်ဘက် Navigation Menu သုံးစွဲခွင့် အခြေအနေ (Permissions):',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                            color: AppColors.textPrimary,
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.bold),
+                                      ),
                                     ),
-                                    const Spacer(),
+                                    const SizedBox(width: 8),
                                     Text(
                                       '${grp.permissions.length} / ${AppMenuPermission.values.length} Menus Allowed',
                                       style: const TextStyle(
@@ -1445,11 +1487,13 @@ class _UserAccessManagementViewState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: AppColors.textMuted, fontSize: 11)),
                   const SizedBox(height: 2),
                   Text(
                     count,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: color,
                       fontSize: 15,
@@ -1457,6 +1501,7 @@ class _UserAccessManagementViewState
                     ),
                   ),
                   Text(burmese,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: AppColors.textSecondary, fontSize: 9.5)),
                 ],
@@ -1611,63 +1656,67 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
 
     return Dialog(
       backgroundColor: AppColors.surface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: 660,
-        constraints: const BoxConstraints(maxHeight: 760),
-        padding: const EdgeInsets.all(26),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      isEdit
-                          ? Icons.edit_note_rounded
-                          : Icons.person_add_alt_1_rounded,
-                      color: AppColors.primary,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isEdit ? 'Edit Staff Account' : 'Add New Staff User',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 660, maxHeight: 760),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      Text(
+                      child: Icon(
                         isEdit
-                            ? 'အသုံးပြုသူ အချက်အလက်နှင့် ဘယ်ဘက် Menu သုံးစွဲခွင့် ပြင်ဆင်ခြင်း'
-                            : 'အသုံးပြုသူအသစ်နှင့် Permission Group သတ်မှတ်ခြင်း',
-                        style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 12),
+                            ? Icons.edit_note_rounded
+                            : Icons.person_add_alt_1_rounded,
+                        color: AppColors.primary,
+                        size: 24,
                       ),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(Icons.close_rounded,
-                        color: AppColors.textMuted),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isEdit ? 'Edit Staff Account' : 'Add New Staff User',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            isEdit
+                                ? 'အသုံးပြုသူ အချက်အလက်နှင့် ဘယ်ဘက် Menu သုံးစွဲခွင့် ပြင်ဆင်ခြင်း'
+                                : 'အသုံးပြုသူအသစ်နှင့် Permission Group သတ်မှတ်ခြင်း',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: AppColors.textSecondary, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded,
+                          color: AppColors.textMuted),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
 
               const SizedBox(height: 18),
 
@@ -1779,6 +1828,7 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
                           Expanded(
                             child: DropdownButtonFormField<UserRole>(
                               initialValue: _role,
+                              isExpanded: true,
                               dropdownColor: AppColors.surfaceVariant,
                               style: TextStyle(
                                   color: AppColors.textPrimary, fontSize: 13),
@@ -1792,7 +1842,9 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
                                 return DropdownMenuItem(
                                   value: r,
                                   child: Text(
-                                      '${r.icon}  ${r.label} (${r.burmeseLabel})'),
+                                    '${r.icon}  ${r.label} (${r.burmeseLabel})',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 );
                               }).toList(),
                               onChanged: (val) {
@@ -1822,6 +1874,7 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
                           Expanded(
                             child: DropdownButtonFormField<String?>(
                               initialValue: _branchId,
+                              isExpanded: true,
                               dropdownColor: AppColors.surfaceVariant,
                               style: TextStyle(
                                   color: AppColors.textPrimary, fontSize: 13),
@@ -1834,12 +1887,18 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
                               items: [
                                 const DropdownMenuItem<String?>(
                                   value: null,
-                                  child: Text('🌐 All Branches (ဆိုင်ခွဲအားလုံး)'),
+                                  child: Text(
+                                    '🌐 All Branches (ဆိုင်ခွဲအားလုံး)',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                                 ...kBranches.entries.map((e) {
                                   return DropdownMenuItem<String?>(
                                     value: e.key,
-                                    child: Text('🏪 ${e.value}'),
+                                    child: Text(
+                                      '🏪 ${e.value}',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   );
                                 }),
                               ],
@@ -1870,15 +1929,18 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
                                 const Icon(Icons.shield_outlined,
                                     size: 18, color: AppColors.primary),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'Permission Group (လုပ်ပိုင်ခွင့်အုပ်စု သတ်မှတ်ခြင်း) *',
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.bold,
+                                Expanded(
+                                  child: Text(
+                                    'Permission Group (လုပ်ပိုင်ခွင့်အုပ်စု သတ်မှတ်ခြင်း) *',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                                const Spacer(),
+                                const SizedBox(width: 8),
                                 Text(
                                   '${_selectedPermissions.length} Menus Granted',
                                   style: const TextStyle(
@@ -1895,6 +1957,7 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
                               initialValue: groups.any((g) => g.id == _permissionGroupId)
                                   ? _permissionGroupId
                                   : (groups.isNotEmpty ? groups.first.id : null),
+                              isExpanded: true,
                               dropdownColor: AppColors.surface,
                               style: TextStyle(
                                   color: AppColors.textPrimary, fontSize: 13),
@@ -1908,7 +1971,9 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
                                 return DropdownMenuItem(
                                   value: g.id,
                                   child: Text(
-                                      '${g.icon}  ${g.name} (${g.burmeseName}) — ${g.permissions.length} Menus'),
+                                    '${g.icon}  ${g.name} (${g.burmeseName}) — ${g.permissions.length} Menus',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 );
                               }).toList(),
                               onChanged: (val) {
@@ -1929,7 +1994,7 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
                             ),
                             const SizedBox(height: 8),
 
-                            // 7 Left Menu Checkboxes
+                            // Left Menu Checkboxes
                             ...AppMenuPermission.values.map((perm) {
                               final isChecked =
                                   _selectedPermissions.contains(perm);
@@ -1943,24 +2008,30 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
                                     Text(perm.emoji,
                                         style: const TextStyle(fontSize: 14)),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      perm.burmeseLabel,
-                                      style: TextStyle(
-                                        color: isChecked
-                                            ? AppColors.textPrimary
-                                            : AppColors.textMuted,
-                                        fontSize: 12.5,
-                                        fontWeight: isChecked
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
+                                    Flexible(
+                                      child: Text(
+                                        perm.burmeseLabel,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: isChecked
+                                              ? AppColors.textPrimary
+                                              : AppColors.textMuted,
+                                          fontSize: 12.5,
+                                          fontWeight: isChecked
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 6),
-                                    Text(
-                                      '(${perm.label})',
-                                      style: TextStyle(
-                                        color: AppColors.textMuted,
-                                        fontSize: 10.5,
+                                    Flexible(
+                                      child: Text(
+                                        '(${perm.label})',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: AppColors.textMuted,
+                                          fontSize: 10.5,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -1999,10 +2070,13 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
                             onChanged: (v) =>
                                 setState(() => _isActive = v ?? true),
                           ),
-                          Text(
-                            'Active Account (အသုံးပြုခွင့်ပေးထားသည်)',
-                            style: TextStyle(
-                                color: AppColors.textPrimary, fontSize: 13),
+                          Expanded(
+                            child: Text(
+                              'Active Account (အသုံးပြုခွင့်ပေးထားသည်)',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: AppColors.textPrimary, fontSize: 13),
+                            ),
                           ),
                         ],
                       ),
@@ -2056,6 +2130,7 @@ class _AddEditUserDialogState extends ConsumerState<_AddEditUserDialog> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -2171,76 +2246,81 @@ class _AddEditPermissionGroupDialogState
 
     return Dialog(
       backgroundColor: AppColors.surface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: 620,
-        constraints: const BoxConstraints(maxHeight: 740),
-        padding: const EdgeInsets.all(26),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 620, maxHeight: 740),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(_selectedIcon,
+                          style: const TextStyle(fontSize: 22)),
                     ),
-                    child: Text(_selectedIcon,
-                        style: const TextStyle(fontSize: 22)),
-                  ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isEdit
-                            ? 'Edit Permission Group'
-                            : 'Add New Permission Group',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isEdit
+                                ? 'Edit Permission Group'
+                                : 'Add New Permission Group',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            isEdit
+                                ? 'ဘယ်ဘက် Menu သုံးစွဲခွင့်များနှင့် အုပ်စုအမည် ပြင်ဆင်ခြင်း'
+                                : 'ဘယ်ဘက် Menu သုံးစွဲခွင့် အုပ်စုအသစ် သတ်မှတ်ခြင်း',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: AppColors.textSecondary, fontSize: 12),
+                          ),
+                        ],
                       ),
-                      Text(
-                        isEdit
-                            ? 'ဘယ်ဘက် Menu သုံးစွဲခွင့်များနှင့် အုပ်စုအမည် ပြင်ဆင်ခြင်း'
-                            : 'ဘယ်ဘက် Menu သုံးစွဲခွင့် အုပ်စုအသစ် သတ်မှတ်ခြင်း',
-                        style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(Icons.close_rounded,
-                        color: AppColors.textMuted),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded,
+                          color: AppColors.textMuted),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Icon presets
-                      Text('အိုင်ကွန် / အီမိုဂျီ ရွေးချယ်ပါ',
-                          style: TextStyle(
-                              color: AppColors.textSecondary, fontSize: 11)),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        children: _iconPresets.map((e) {
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Icon presets
+                        Text('အိုင်ကွန် / အီမိုဂျီ ရွေးချယ်ပါ',
+                            style: TextStyle(
+                                color: AppColors.textSecondary, fontSize: 11)),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _iconPresets.map((e) {
                           final isSel = _selectedIcon == e;
                           return InkWell(
                             onTap: () => setState(() => _selectedIcon = e),
@@ -2341,16 +2421,19 @@ class _AddEditPermissionGroupDialogState
                           children: [
                             Row(
                               children: [
-                                Text(
-                                  'ဘယ်ဘက် Navigation Menu သုံးစွဲခွင့်များ သတ်မှတ်ပါ (Permissions):',
-                                  style: TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.bold),
+                                Expanded(
+                                  child: Text(
+                                    'ဘယ်ဘက် Navigation Menu သုံးစွဲခွင့်များ သတ်မှတ်ပါ (Permissions):',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.bold),
+                                  ),
                                 ),
-                                const Spacer(),
+                                const SizedBox(width: 8),
                                 Text(
-                                  '${_selectedPermissions.length} / 7 Allowed',
+                                  '${_selectedPermissions.length} / ${AppMenuPermission.values.length} Allowed',
                                   style: const TextStyle(
                                       color: AppColors.primary,
                                       fontSize: 11.5,
@@ -2373,24 +2456,30 @@ class _AddEditPermissionGroupDialogState
                                     Text(perm.emoji,
                                         style: const TextStyle(fontSize: 14)),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      perm.burmeseLabel,
-                                      style: TextStyle(
-                                        color: isChecked
-                                            ? AppColors.textPrimary
-                                            : AppColors.textMuted,
-                                        fontSize: 12.5,
-                                        fontWeight: isChecked
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
+                                    Flexible(
+                                      child: Text(
+                                        perm.burmeseLabel,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: isChecked
+                                              ? AppColors.textPrimary
+                                              : AppColors.textMuted,
+                                          fontSize: 12.5,
+                                          fontWeight: isChecked
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 6),
-                                    Text(
-                                      '(${perm.label})',
-                                      style: TextStyle(
-                                          color: AppColors.textMuted,
-                                          fontSize: 10.5),
+                                    Flexible(
+                                      child: Text(
+                                        '(${perm.label})',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                            color: AppColors.textMuted,
+                                            fontSize: 10.5),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -2460,6 +2549,7 @@ class _AddEditPermissionGroupDialogState
           ),
         ),
       ),
+    ),
     );
   }
 }
