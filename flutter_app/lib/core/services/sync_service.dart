@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import '../constants/app_constants.dart';
 import '../db/drift/app_database.dart';
 import '../network/api_client.dart';
 import '../utils/app_toast.dart';
@@ -33,22 +35,65 @@ class SyncService {
         _db = db,
         _ref = ref;
 
-  /// Start periodic sync and listen for internet reconnection
-  void startPeriodicSync({Duration interval = const Duration(minutes: 3)}) {
-    _timer?.cancel();
-    _timer = Timer.periodic(interval, (_) => syncPendingQueue());
+  /// Real ping to check whether internet and backend server are genuinely reachable
+  Future<bool> checkInternetReachability({bool showToast = false}) async {
+    bool reachable = false;
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      if (connectivityResult.contains(ConnectivityResult.none)) {
+        _ref.read(isOnlineProvider.notifier).state = false;
+        if (showToast) {
+          AppToast.showError('အင်တာနက် ချိတ်ဆက်မှု မရှိပါ (Device တွင် Wi-Fi သို့မဟုတ် Mobile Data ဖွင့်ထားခြင်း မရှိပါ)');
+        }
+        return false;
+      }
 
-    _connectivitySub?.cancel();
-    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
-      final isConnected = !results.contains(ConnectivityResult.none);
-      if (isConnected) {
-        debugPrint('[SyncService] 🌐 Internet connectivity detected! Triggering instant sync...');
-        syncPendingQueue(isAutoOnReconnect: true);
+      // Test real HTTP reachability with short timeout (2.5s)
+      final uri = Uri.parse('${AppConstants.apiBaseUrl}/health');
+      final res = await http.get(uri).timeout(const Duration(milliseconds: 2500));
+      reachable = (res.statusCode >= 200 && res.statusCode < 400);
+    } catch (_) {
+      reachable = false;
+    }
+
+    _ref.read(isOnlineProvider.notifier).state = reachable;
+    if (showToast) {
+      if (reachable) {
+        AppToast.showSuccess('Cloud Server နှင့် ချိတ်ဆက်မှု အဆင်ပြေပါသည် (Online)');
+      } else {
+        AppToast.showError('Wi-Fi ချိတ်ဆက်ထားသော်လည်း အင်တာနက်လိုင်း မရှိပါ (Offline)');
+      }
+    }
+    return reachable;
+  }
+
+  /// Start periodic sync and listen for internet reconnection
+  void startPeriodicSync({Duration interval = const Duration(minutes: 2)}) {
+    _timer?.cancel();
+    _timer = Timer.periodic(interval, (_) async {
+      final online = await checkInternetReachability();
+      if (online) {
+        syncPendingQueue();
       }
     });
 
-    // Initial check of pending queue count
+    _connectivitySub?.cancel();
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) async {
+      final hasAdapter = !results.contains(ConnectivityResult.none);
+      if (!hasAdapter) {
+        _ref.read(isOnlineProvider.notifier).state = false;
+      } else {
+        final isReachable = await checkInternetReachability();
+        if (isReachable) {
+          debugPrint('[SyncService] 🌐 Internet connectivity confirmed! Triggering instant sync...');
+          syncPendingQueue(isAutoOnReconnect: true);
+        }
+      }
+    });
+
+    // Initial check of pending queue count and reachability
     updatePendingCount();
+    checkInternetReachability();
   }
 
   void stopPeriodicSync() {
@@ -75,14 +120,12 @@ class SyncService {
   Future<bool> syncPendingQueue({bool isAutoOnReconnect = false}) async {
     if (_isSyncing) return false;
 
-    // Check connectivity first
-    try {
-      final connectivityResult = await Connectivity().checkConnectivity();
-      if (connectivityResult.contains(ConnectivityResult.none)) {
-        await updatePendingCount();
-        return false;
-      }
-    } catch (_) {}
+    // Check real reachability first
+    final isReachable = await checkInternetReachability();
+    if (!isReachable) {
+      await updatePendingCount();
+      return false;
+    }
 
     _isSyncing = true;
     try {

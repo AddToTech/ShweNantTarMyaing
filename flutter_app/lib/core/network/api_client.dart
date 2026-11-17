@@ -13,20 +13,26 @@ import '../utils/app_toast.dart';
 import 'api_exception.dart';
 import 'http_logger.dart';
 
+/// Tracks whether the app has verified internet connectivity to the cloud backend.
+final isOnlineProvider = StateProvider<bool>((ref) => true);
+
 final apiClientProvider = Provider<ApiClient>((ref) {
   final authService = ref.watch(authServiceProvider);
-  return ApiClient(authService: authService);
+  return ApiClient(authService: authService, ref: ref);
 });
 
 class ApiClient {
   final AuthService _authService;
   final http.Client _client;
+  final Ref? _ref;
 
   ApiClient({
     required AuthService authService,
     http.Client? client,
+    Ref? ref,
   })  : _authService = authService,
-        _client = client ?? http.Client();
+        _client = client ?? http.Client(),
+        _ref = ref;
 
   Uri _buildUri(String endpoint, [Map<String, dynamic>? queryParams]) {
     final cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/$endpoint';
@@ -142,7 +148,9 @@ class ApiClient {
     http.Response response;
     try {
       response = await _dispatchHttp(method, uri, reqHeaders, processedBody);
+      _ref?.read(isOnlineProvider.notifier).state = true;
     } catch (e, st) {
+      _ref?.read(isOnlineProvider.notifier).state = false;
       HttpLogger.logError(method: method, uri: uri, error: e, duration: sw.elapsed, stackTrace: st);
 
       // On Android, if connection failed, retry with fallback host (10.0.2.2 <-> localhost)
@@ -154,12 +162,14 @@ class ApiClient {
           HttpLogger.logRequest(method: method, uri: fallbackUri, headers: reqHeaders, body: processedBody);
           try {
             response = await _dispatchHttp(method, fallbackUri, reqHeaders, processedBody);
+            _ref?.read(isOnlineProvider.notifier).state = true;
             // Succeeded with fallback, remember this base URL
             final cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/$endpoint';
             final newBase = fallbackUri.toString().replaceAll(cleanEndpoint, '');
             AppConstants.setResolvedApiBaseUrl(newBase);
             debugPrint('[ApiClient] ✅ Fallback host succeeded! Saved base URL: $newBase');
           } catch (retryErr, retrySt) {
+            _ref?.read(isOnlineProvider.notifier).state = false;
             HttpLogger.logError(method: method, uri: fallbackUri, error: retryErr, duration: retrySw.elapsed, stackTrace: retrySt);
             final errMsg = _formatNetworkErrorMessage(retryErr, uri, fallbackUri);
             if (!suppressErrorToast) {

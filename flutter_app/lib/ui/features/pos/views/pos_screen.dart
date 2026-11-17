@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/services/sync_service.dart';
 import '../../../../core/utils/app_toast.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -616,6 +617,7 @@ class _TopBarState extends ConsumerState<_TopBar> {
   Widget build(BuildContext context) {
     final heldOrders = ref.watch(cartProvider).heldOrders;
     final pendingSyncCount = ref.watch(syncPendingCountProvider);
+    final isOnline = ref.watch(isOnlineProvider);
 
     return Container(
       height: 58,
@@ -699,17 +701,23 @@ class _TopBarState extends ConsumerState<_TopBar> {
 
           // Cloud Sync & Connection indicator
           Tooltip(
-            message: pendingSyncCount > 0
-                ? 'အင်တာနက်ပြတ်တောက်စဉ် ရောင်းချထားသော စာရင်း $pendingSyncCount ခုရှိပါသည် (နှိပ်၍ Cloud ပေါ်သို့ တင်ပါ)'
-                : 'Cloud Server နှင့် ချိတ်ဆက်မှု အဆင်ပြေပါသည် (စနစ်အားလုံး Update ဖြစ်နေပါသည်)',
+            message: !isOnline
+                ? (pendingSyncCount > 0
+                    ? 'အင်တာနက် မရှိပါ (Offline) - မတင်ရသေးသော စာရင်း $pendingSyncCount ခုရှိပါသည် (နှိပ်၍ ပြန်စစ်ပါ)'
+                    : 'အင်တာနက် မရှိပါ (Wi-Fi ချိတ်ထားသော်လည်း Internet မရပါ) - နှိပ်၍ ပြန်စစ်ပါ')
+                : (pendingSyncCount > 0
+                    ? 'အင်တာနက်ရပါပြီ - စာရင်း $pendingSyncCount ခုအား Server သို့ ပို့ရန် နှိပ်ပါ'
+                    : 'Cloud Server နှင့် ချိတ်ဆက်မှု အဆင်ပြေပါသည် (Online)'),
             child: InkWell(
               onTap: () async {
-                final count = await ref.read(syncServiceProvider).updatePendingCount();
-                if (count > 0) {
-                  AppToast.showInfo('Cloud Server သို့ စာရင်းများ ပေးပို့နေပါသည်...');
-                  await ref.read(syncServiceProvider).syncPendingQueue();
-                } else {
-                  AppToast.showSuccess('အချက်အလက်အားလုံး Cloud ပေါ်တွင် မွမ်းမံပြီးပါပြီ');
+                final syncService = ref.read(syncServiceProvider);
+                AppToast.showInfo('အင်တာနက် ချိတ်ဆက်မှု စစ်ဆေးနေပါသည်...');
+                final reachable = await syncService.checkInternetReachability(showToast: true);
+                if (reachable) {
+                  final count = await syncService.updatePendingCount();
+                  if (count > 0) {
+                    await syncService.syncPendingQueue();
+                  }
                 }
               },
               borderRadius: BorderRadius.circular(10),
@@ -717,39 +725,51 @@ class _TopBarState extends ConsumerState<_TopBar> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: pendingSyncCount > 0
-                      ? AppColors.warning.withValues(alpha: 0.15)
-                      : AppColors.success.withValues(alpha: 0.12),
+                  color: !isOnline
+                      ? AppColors.error.withValues(alpha: 0.15)
+                      : (pendingSyncCount > 0
+                          ? AppColors.warning.withValues(alpha: 0.15)
+                          : AppColors.success.withValues(alpha: 0.12)),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: pendingSyncCount > 0
-                        ? AppColors.warning.withValues(alpha: 0.4)
-                        : AppColors.success.withValues(alpha: 0.3),
+                    color: !isOnline
+                        ? AppColors.error.withValues(alpha: 0.4)
+                        : (pendingSyncCount > 0
+                            ? AppColors.warning.withValues(alpha: 0.4)
+                            : AppColors.success.withValues(alpha: 0.3)),
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      pendingSyncCount > 0
-                          ? Icons.cloud_upload_outlined
-                          : Icons.cloud_done_rounded,
+                      !isOnline
+                          ? Icons.cloud_off_rounded
+                          : (pendingSyncCount > 0
+                              ? Icons.cloud_upload_outlined
+                              : Icons.cloud_done_rounded),
                       size: 16,
-                      color: pendingSyncCount > 0
-                          ? AppColors.warning
-                          : AppColors.success,
+                      color: !isOnline
+                          ? AppColors.error
+                          : (pendingSyncCount > 0
+                              ? AppColors.warning
+                              : AppColors.success),
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      pendingSyncCount > 0
-                          ? 'Sync ($pendingSyncCount)'
-                          : 'Online',
+                      !isOnline
+                          ? (pendingSyncCount > 0 ? 'Offline ($pendingSyncCount)' : 'Offline')
+                          : (pendingSyncCount > 0
+                              ? 'Sync ($pendingSyncCount)'
+                              : 'Online'),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: pendingSyncCount > 0
-                            ? AppColors.warning
-                            : AppColors.success,
+                        color: !isOnline
+                            ? AppColors.error
+                            : (pendingSyncCount > 0
+                                ? AppColors.warning
+                                : AppColors.success),
                       ),
                     ),
                   ],
