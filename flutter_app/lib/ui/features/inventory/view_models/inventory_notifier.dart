@@ -37,22 +37,47 @@ class BranchStock {
 class InventoryState {
   const InventoryState({
     this.stocks = const {},
+    this.exactStocks = const {},
+    this.approxStocks = const {},
   });
 
-  /// Key: '$branchId:$productId' -> quantity
+  /// Key: '$branchId:$productId' -> integer quantity (for backward compatibility)
   final Map<String, int> stocks;
+
+  /// Key: '$branchId:$productId' -> exact decimal quantity (supports fractional Kg)
+  final Map<String, double> exactStocks;
+
+  /// Key: '$branchId:$productId' -> approximate piece quantity for Kg products
+  final Map<String, int> approxStocks;
 
   int getStock(String branchId, String productId) {
     return stocks['$branchId:$productId'] ?? 0;
   }
 
+  double getExactStock(String branchId, String productId) {
+    final key = '$branchId:$productId';
+    return exactStocks[key] ?? (stocks[key]?.toDouble() ?? 0.0);
+  }
+
+  int getApproxStock(String branchId, String productId) {
+    return approxStocks['$branchId:$productId'] ?? 0;
+  }
+
   bool isLowStock(String branchId, MockProduct product) {
-    final qty = getStock(branchId, product.id);
+    final qty = getExactStock(branchId, product.id);
     return qty <= product.minStock;
   }
 
-  InventoryState copyWith({Map<String, int>? stocks}) {
-    return InventoryState(stocks: stocks ?? this.stocks);
+  InventoryState copyWith({
+    Map<String, int>? stocks,
+    Map<String, double>? exactStocks,
+    Map<String, int>? approxStocks,
+  }) {
+    return InventoryState(
+      stocks: stocks ?? this.stocks,
+      exactStocks: exactStocks ?? this.exactStocks,
+      approxStocks: approxStocks ?? this.approxStocks,
+    );
   }
 }
 
@@ -60,7 +85,7 @@ class InventoryNotifier extends Notifier<InventoryState> {
   @override
   InventoryState build() {
     loadAllBranchStocks();
-    return const InventoryState(stocks: {});
+    return const InventoryState();
   }
 
   /// Load stock for all branches from PostgreSQL backend
@@ -74,6 +99,8 @@ class InventoryNotifier extends Notifier<InventoryState> {
   /// Bulk-update stocks map (called by CatalogNotifier when /products returns branch_stocks)
   void applyBranchStocksFromProducts(List<Map<String, dynamic>> rawProducts) {
     final next = Map<String, int>.from(state.stocks);
+    final nextExact = Map<String, double>.from(state.exactStocks);
+    final nextApprox = Map<String, int>.from(state.approxStocks);
     for (final map in rawProducts) {
       final id = map['id']?.toString() ?? '';
       final sku = map['sku']?.toString() ?? '';
@@ -81,21 +108,43 @@ class InventoryNotifier extends Notifier<InventoryState> {
       if (branchStocks is Map) {
         branchStocks.forEach((rawBranchId, rawQty) {
           final bKey = normalizeBranchId(rawBranchId.toString());
-          final qty = (rawQty is num)
-              ? rawQty.toInt()
-              : double.tryParse(rawQty?.toString() ?? '')?.toInt() ?? 0;
+          final exact = (rawQty is num)
+              ? rawQty.toDouble()
+              : double.tryParse(rawQty?.toString() ?? '') ?? 0.0;
+          final qty = exact.round();
           if (id.isNotEmpty) {
             next['$bKey:$id'] = qty;
             next['$rawBranchId:$id'] = qty;
+            nextExact['$bKey:$id'] = exact;
+            nextExact['$rawBranchId:$id'] = exact;
           }
           if (sku.isNotEmpty) {
             next['$bKey:$sku'] = qty;
             next['$rawBranchId:$sku'] = qty;
+            nextExact['$bKey:$sku'] = exact;
+            nextExact['$rawBranchId:$sku'] = exact;
+          }
+        });
+      }
+      final branchApprox = map['branch_approx_stocks'];
+      if (branchApprox is Map) {
+        branchApprox.forEach((rawBranchId, rawApprox) {
+          final bKey = normalizeBranchId(rawBranchId.toString());
+          final approx = (rawApprox is num)
+              ? rawApprox.toInt()
+              : int.tryParse(rawApprox?.toString() ?? '') ?? 0;
+          if (id.isNotEmpty) {
+            nextApprox['$bKey:$id'] = approx;
+            nextApprox['$rawBranchId:$id'] = approx;
           }
         });
       }
     }
-    state = state.copyWith(stocks: next);
+    state = state.copyWith(
+      stocks: next,
+      exactStocks: nextExact,
+      approxStocks: nextApprox,
+    );
   }
 
   /// Load live stock quantities for a specific branch from backend
@@ -106,17 +155,34 @@ class InventoryNotifier extends Notifier<InventoryState> {
       final data = await client.get('/products', queryParams: {'branchId': actualBranchId});
       if (data is List && data.isNotEmpty) {
         final next = Map<String, int>.from(state.stocks);
+        final nextExact = Map<String, double>.from(state.exactStocks);
+        final nextApprox = Map<String, int>.from(state.approxStocks);
         for (final item in data) {
           final map = item as Map<String, dynamic>;
           final id = map['id']?.toString() ?? '';
           final sku = map['sku']?.toString() ?? '';
-          final qty = (map['stock_quantity'] is num)
-              ? (map['stock_quantity'] as num).toInt()
-              : double.tryParse(map['stock_quantity']?.toString() ?? '')?.toInt() ?? 0;
-          if (id.isNotEmpty) next['$branchId:$id'] = qty;
-          if (sku.isNotEmpty) next['$branchId:$sku'] = qty;
+          final exact = (map['stock_quantity'] is num)
+              ? (map['stock_quantity'] as num).toDouble()
+              : double.tryParse(map['stock_quantity']?.toString() ?? '') ?? 0.0;
+          final qty = exact.round();
+          final approx = (map['approximate_quantity'] is num)
+              ? (map['approximate_quantity'] as num).toInt()
+              : int.tryParse(map['approximate_quantity']?.toString() ?? '') ?? 0;
+          if (id.isNotEmpty) {
+            next['$branchId:$id'] = qty;
+            nextExact['$branchId:$id'] = exact;
+            nextApprox['$branchId:$id'] = approx;
+          }
+          if (sku.isNotEmpty) {
+            next['$branchId:$sku'] = qty;
+            nextExact['$branchId:$sku'] = exact;
+          }
         }
-        state = state.copyWith(stocks: next);
+        state = state.copyWith(
+          stocks: next,
+          exactStocks: nextExact,
+          approxStocks: nextApprox,
+        );
       }
     } catch (_) {}
   }
@@ -124,38 +190,83 @@ class InventoryNotifier extends Notifier<InventoryState> {
   /// Deduct stock for a product at a branch (e.g. sale, wastage, outgoing transfer)
   bool deductStock(String branchId, String productId, int quantity) {
     final key = '$branchId:$productId';
-    final current = state.stocks[key] ?? 0;
-    if (quantity > current) {
+    final currentExact = state.getExactStock(branchId, productId);
+    if (quantity > currentExact) {
       return false; // Insufficient stock
     }
+    final nextExactVal = (currentExact - quantity).clamp(0.0, 999999.0);
     final next = Map<String, int>.from(state.stocks);
-    next[key] = current - quantity;
-    state = state.copyWith(stocks: next);
+    final nextExact = Map<String, double>.from(state.exactStocks);
+    nextExact[key] = nextExactVal;
+    next[key] = nextExactVal.round();
+    state = state.copyWith(stocks: next, exactStocks: nextExact);
     return true;
   }
 
   /// Add stock for a product at a branch (e.g. transfer receipt, restock, void)
   void addStock(String branchId, String productId, int quantity) {
+    addStockExact(branchId, productId, quantity.toDouble());
+  }
+
+  /// Add fractional (Kg) stock and optional approximate quantity at a branch
+  void addStockExact(
+    String branchId,
+    String productId,
+    double quantity, {
+    int? approximateQuantity,
+  }) {
     final key = '$branchId:$productId';
-    final current = state.stocks[key] ?? 0;
+    final currentExact = state.getExactStock(branchId, productId);
+    final nextExactVal = (currentExact + quantity).clamp(0.0, 999999.0);
     final next = Map<String, int>.from(state.stocks);
-    next[key] = current + quantity;
-    state = state.copyWith(stocks: next);
+    final nextExact = Map<String, double>.from(state.exactStocks);
+    nextExact[key] = nextExactVal;
+    next[key] = nextExactVal.round();
+
+    Map<String, int>? nextApprox;
+    if (approximateQuantity != null && approximateQuantity > 0) {
+      nextApprox = Map<String, int>.from(state.approxStocks);
+      nextApprox[key] = (nextApprox[key] ?? 0) + approximateQuantity;
+    }
+
+    state = state.copyWith(
+      stocks: next,
+      exactStocks: nextExact,
+      approxStocks: nextApprox,
+    );
   }
 
   /// Updates local stock map without triggering a remote API call
-  void setLocalStock(String branchId, String productId, int quantity) {
+  void setLocalStock(String branchId, String productId, num quantity,
+      {int? approximateQuantity}) {
     final key = '$branchId:$productId';
+    final clamped = quantity.toDouble().clamp(0.0, 999999.0);
     final next = Map<String, int>.from(state.stocks);
-    next[key] = quantity.clamp(0, 999999);
-    state = state.copyWith(stocks: next);
+    final nextExact = Map<String, double>.from(state.exactStocks);
+    nextExact[key] = clamped;
+    next[key] = clamped.round();
+
+    Map<String, int>? nextApprox;
+    if (approximateQuantity != null) {
+      nextApprox = Map<String, int>.from(state.approxStocks);
+      nextApprox[key] = approximateQuantity.clamp(0, 999999);
+    }
+
+    state = state.copyWith(
+      stocks: next,
+      exactStocks: nextExact,
+      approxStocks: nextApprox,
+    );
   }
 
-  /// Directly set stock quantity (manual stock take adjustment) with backend sync.
+  /// Directly set stock quantity (supports decimal Kg and optional approximateQuantity) with backend sync.
   /// Returns true only if the backend API request succeeds.
-  Future<bool> setStock(String branchId, String productId, int quantity) async {
-    final prev = getStockFor(branchId, productId);
-    setLocalStock(branchId, productId, quantity);
+  Future<bool> setStock(String branchId, String productId, num quantity,
+      {int? approximateQuantity}) async {
+    final prevExact = state.getExactStock(branchId, productId);
+    final prevApprox = state.getApproxStock(branchId, productId);
+    setLocalStock(branchId, productId, quantity,
+        approximateQuantity: approximateQuantity);
 
     try {
       final client = ref.read(apiClientProvider);
@@ -163,10 +274,16 @@ class InventoryNotifier extends Notifier<InventoryState> {
         'branchId': branchId,
         'productId': productId,
         'newQuantity': quantity,
+        if (approximateQuantity != null) 'approximateQuantity': approximateQuantity,
       });
       return true;
     } catch (_) {
-      setLocalStock(branchId, productId, prev);
+      setLocalStock(
+        branchId,
+        productId,
+        prevExact,
+        approximateQuantity: approximateQuantity != null ? prevApprox : null,
+      );
       return false;
     }
   }
@@ -245,13 +362,20 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
   Future<bool> addProduct(
     MockProduct product, {
     Map<String, int> branchStocks = const {},
+    Map<String, double> exactBranchStocks = const {},
+    Map<String, int> branchApproxStocks = const {},
     int stockBranchA = 0,
     int stockBranchB = 0,
   }) async {
     try {
       final client = ref.read(apiClientProvider);
 
-      final finalStocks = Map<String, int>.from(branchStocks);
+      final finalStocks = <String, num>{
+        if (exactBranchStocks.isNotEmpty)
+          ...exactBranchStocks
+        else
+          ...branchStocks,
+      };
       if (stockBranchA > 0 && !finalStocks.containsKey('branch_a')) {
         finalStocks['branch_a'] = stockBranchA;
       }
@@ -277,13 +401,17 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
         'originId': product.originId,
         'sizeLabel': product.sizeLabel,
         'vendorId': product.vendorId,
+        'unitOfMeasure': product.unitOfMeasure,
         'initialStock': firstStock,
         'branchId': firstBranchId,
         'branchStocks': finalStocks,
+        if (branchApproxStocks.isNotEmpty) 'branchApproxStocks': branchApproxStocks,
         if (isRemoteImage) 'imageUrl': rawImagePath,
         'attributes': {
           'imageEmoji': product.imageEmoji,
           if (isAssetImage) 'customImagePath': rawImagePath,
+          if (product.approximateQuantity != null)
+            'approximateQuantity': product.approximateQuantity,
         },
       });
 
@@ -297,11 +425,13 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
 
       for (final entry in finalStocks.entries) {
         if (entry.key == firstBranchId) continue;
-        if (entry.value > 0) {
+        final approx = branchApproxStocks[entry.key];
+        if (entry.value > 0 || (approx != null && approx > 0)) {
           await client.post('/inventory/adjust', body: {
             'branchId': entry.key,
             'productId': createdId,
             'newQuantity': entry.value,
+            if (approx != null) 'approximateQuantity': approx,
           });
         }
       }
@@ -319,6 +449,8 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
   Future<bool> updateProduct(
     MockProduct updated, {
     Map<String, int> branchStocks = const {},
+    Map<String, double> exactBranchStocks = const {},
+    Map<String, int> branchApproxStocks = const {},
     int? stockBranchA,
     int? stockBranchB,
   }) async {
@@ -344,11 +476,14 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
         'originType': updated.originName ?? updated.originType?.name,
         'originId': updated.originId,
         'vendorId': updated.vendorId,
+        'unitOfMeasure': updated.unitOfMeasure,
         if (isCleared || isAsset) 'imageUrl': null,
         if (isRemote) 'imageUrl': rawImagePath,
         'attributes': {
           'imageEmoji': updated.imageEmoji,
           if (isAsset || isUnresolvableLegacyPath) 'customImagePath': rawImagePath,
+          if (updated.approximateQuantity != null)
+            'approximateQuantity': updated.approximateQuantity,
         },
       });
 
@@ -356,7 +491,12 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
         await _uploadProductImageIfPresent(client, updated.id, rawImagePath);
       }
 
-      final finalStocks = Map<String, int>.from(branchStocks);
+      final finalStocks = <String, num>{
+        if (exactBranchStocks.isNotEmpty)
+          ...exactBranchStocks
+        else
+          ...branchStocks,
+      };
       if (stockBranchA != null && !finalStocks.containsKey('branch_a')) {
         finalStocks['branch_a'] = stockBranchA;
       }
@@ -365,10 +505,12 @@ class CatalogNotifier extends Notifier<List<MockProduct>> {
       }
 
       for (final entry in finalStocks.entries) {
+        final approx = branchApproxStocks[entry.key];
         await client.post('/inventory/adjust', body: {
           'branchId': entry.key,
           'productId': updated.id,
           'newQuantity': entry.value,
+          if (approx != null) 'approximateQuantity': approx,
         });
       }
 
@@ -403,15 +545,20 @@ class ProductWithStock {
   const ProductWithStock({
     required this.product,
     required this.stock,
+    this.exactStock,
+    this.approximateQty = 0,
     required this.branchId,
   });
 
   final MockProduct product;
   final int stock;
+  final double? exactStock;
+  final int approximateQty;
   final String branchId;
 
-  bool get isLowStock => stock <= product.minStock;
-  bool get isOutOfStock => stock <= 0;
+  double get displayStock => exactStock ?? stock.toDouble();
+  bool get isLowStock => displayStock <= product.minStock;
+  bool get isOutOfStock => displayStock <= 0;
 }
 
 /// Provider of products with live branch stock
@@ -421,9 +568,13 @@ final branchInventoryProvider =
   final inv = ref.watch(inventoryProvider);
   return products.map((p) {
     final stock = inv.getStock(branchId, p.id);
+    final exactStock = inv.getExactStock(branchId, p.id);
+    final approxQty = inv.getApproxStock(branchId, p.id);
     return ProductWithStock(
       product: p,
       stock: stock,
+      exactStock: exactStock,
+      approximateQty: approxQty,
       branchId: branchId,
     );
   }).toList();
@@ -442,9 +593,15 @@ final lowStockAlertProvider =
 
   for (final bId in branchesToCheck) {
     for (final p in products) {
-      final stock = inv.getStock(bId, p.id);
-      if (stock <= p.minStock) {
-        result.add(ProductWithStock(product: p, stock: stock, branchId: bId));
+      final exactStock = inv.getExactStock(bId, p.id);
+      if (exactStock <= p.minStock) {
+        result.add(ProductWithStock(
+          product: p,
+          stock: exactStock.round(),
+          exactStock: exactStock,
+          approximateQty: inv.getApproxStock(bId, p.id),
+          branchId: bId,
+        ));
       }
     }
   }

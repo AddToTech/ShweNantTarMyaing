@@ -28,6 +28,12 @@ class CategoryItem {
   final Map<String, String> subcategoryIds;
   final bool isBuiltIn;
 
+  bool get isKgCategory {
+    final n = name.toLowerCase();
+    final e = englishName.toLowerCase();
+    return n.contains('kg') || e.contains('kg');
+  }
+
   CategoryItem copyWith({
     String? id,
     String? name,

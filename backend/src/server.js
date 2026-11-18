@@ -156,6 +156,44 @@ if (process.env.NODE_ENV !== 'test') {
       )
       .catch((err) => console.error('Migration notice (products_vendor_id):', err.message));
 
+    // Support approximate_quantity on branch_inventories and approximate_qty on purchase_items for Kg Sell products
+    await pool
+      .query(
+        `ALTER TABLE branch_inventories ADD COLUMN IF NOT EXISTS approximate_quantity INT NOT NULL DEFAULT 0;
+         ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS approximate_qty INT;
+         CREATE OR REPLACE FUNCTION apply_purchase_to_inventory(p_purchase_id UUID)
+         RETURNS VOID AS $$
+         DECLARE
+           rec RECORD;
+           p_branch_id UUID;
+         BEGIN
+           SELECT branch_id INTO p_branch_id FROM purchases WHERE id = p_purchase_id;
+
+           FOR rec IN
+             SELECT pi.product_id, pi.quantity, pi.unit_cost, COALESCE(pi.approximate_qty, 0) AS approximate_qty
+             FROM purchase_items pi
+             WHERE pi.purchase_id = p_purchase_id
+           LOOP
+             INSERT INTO branch_inventories (branch_id, product_id, stock_quantity, approximate_quantity)
+             VALUES (p_branch_id, rec.product_id, rec.quantity, rec.approximate_qty)
+             ON CONFLICT (branch_id, product_id)
+             DO UPDATE SET
+               stock_quantity       = branch_inventories.stock_quantity + rec.quantity,
+               approximate_quantity = branch_inventories.approximate_quantity + rec.approximate_qty,
+               updated_at           = NOW();
+
+             IF rec.unit_cost > 0 THEN
+               UPDATE products
+               SET cost_price = rec.unit_cost,
+                   updated_at = NOW()
+               WHERE id = rec.product_id;
+             END IF;
+           END LOOP;
+         END;
+         $$ LANGUAGE plpgsql;`
+      )
+      .catch((err) => console.error('Migration notice (kg_sell_support):', err.message));
+
     // Ensure sync_audit_log supports nullable table_name and entity_name
     await pool
       .query(

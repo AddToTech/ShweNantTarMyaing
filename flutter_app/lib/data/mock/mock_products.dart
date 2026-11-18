@@ -45,6 +45,8 @@ class MockProduct {
     this.customImagePath,
     this.sku = '',
     this.barcode,
+    this.unitOfMeasure = 'piece',
+    this.approximateQuantity,
   });
 
   final String id;
@@ -74,6 +76,17 @@ class MockProduct {
   final String? customImagePath;
   final String sku;
   final String? barcode;
+  final String unitOfMeasure;
+  final int? approximateQuantity;
+
+  bool get isKgProduct =>
+      unitOfMeasure.toLowerCase() == 'kg' ||
+      (categoryName?.toLowerCase().contains('kg') ?? false);
+
+  static String formatQty(num q) {
+    if (q == q.roundToDouble()) return q.toInt().toString();
+    return q.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
 
   bool get isLowStock => stock <= minStock;
   bool get isOutOfStock => stock == 0;
@@ -213,6 +226,8 @@ class MockProduct {
     bool clearCustomImage = false,
     String? sku,
     String? barcode,
+    String? unitOfMeasure,
+    int? approximateQuantity,
   }) {
     return MockProduct(
       id: id ?? this.id,
@@ -235,6 +250,8 @@ class MockProduct {
       customImagePath: clearCustomImage ? null : (customImagePath ?? this.customImagePath),
       sku: sku ?? this.sku,
       barcode: barcode ?? this.barcode,
+      unitOfMeasure: unitOfMeasure ?? this.unitOfMeasure,
+      approximateQuantity: approximateQuantity ?? this.approximateQuantity,
     );
   }
 
@@ -297,6 +314,14 @@ class MockProduct {
     final minStockQty = (json['min_alert_threshold'] is num)
         ? (json['min_alert_threshold'] as num).toInt()
         : double.tryParse(json['min_alert_threshold']?.toString() ?? '')?.toInt() ?? 5;
+    final rawApprox = json['approximate_quantity'] ?? attrs['approximateQuantity'];
+    final approxQty = (rawApprox is num)
+        ? rawApprox.toInt()
+        : int.tryParse(rawApprox?.toString() ?? '');
+    final rawUnit = json['unit_of_measure']?.toString().trim();
+    final unitOfMeasure = (rawUnit != null && rawUnit.isNotEmpty)
+        ? rawUnit
+        : ((rawCatName?.toLowerCase().contains('kg') ?? false) ? 'kg' : 'piece');
 
     final rawVendorId = (json['vendor_id'] ?? json['vendorId'])?.toString();
     final rawVendorName = (json['vendor_name'] ?? json['vendorName'])?.toString();
@@ -325,6 +350,8 @@ class MockProduct {
       customImagePath: imagePath,
       sku: json['sku']?.toString() ?? '',
       barcode: json['barcode']?.toString(),
+      unitOfMeasure: unitOfMeasure,
+      approximateQuantity: approxQty,
     );
   }
 
@@ -347,6 +374,8 @@ class MockProduct {
     'customImagePath': customImagePath,
     'sku': sku,
     'barcode': barcode,
+    'unitOfMeasure': unitOfMeasure,
+    'approximateQuantity': approximateQuantity,
   };
 }
 

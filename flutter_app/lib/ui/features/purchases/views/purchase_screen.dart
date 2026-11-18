@@ -199,6 +199,8 @@ class _NewPurchaseTabState extends ConsumerState<_NewPurchaseTab> {
           productName: product.name,
           quantity: 1,
           unitCost: product.costPrice,
+          approximateQty: product.isKgProduct ? 0 : null,
+          isKg: product.isKgProduct,
         ));
       }
     });
@@ -283,6 +285,10 @@ class _NewPurchaseTabState extends ConsumerState<_NewPurchaseTab> {
       _snack('ပစ္စည်း အနည်းဆုံး (၁) မျိုး ထည့်သွင်းပါ။');
       return;
     }
+    if (_draftItems.any((d) => d.quantity <= 0)) {
+      _snack('အရေအတွက် (သို့) Total Kg သည် 0 ထက် ကြီးရပါမည်။');
+      return;
+    }
 
     final authState = ref.read(authProvider);
 
@@ -297,6 +303,8 @@ class _NewPurchaseTabState extends ConsumerState<_NewPurchaseTab> {
                 productName: d.productName,
                 quantity: d.quantity,
                 unitCost: d.unitCost,
+                approximateQty: d.isKg ? (d.approximateQty ?? 0) : null,
+                unitOfMeasure: d.isKg ? 'kg' : 'piece',
               ))
           .toList(),
       discount: _discount,
@@ -578,9 +586,12 @@ class _NewPurchaseTabState extends ConsumerState<_NewPurchaseTab> {
                         itemCount: _draftItems.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 6),
                         itemBuilder: (ctx, i) => _DraftItemRow(
+                          key: ValueKey(_draftItems[i].productId),
                           item: _draftItems[i],
                           onQtyChanged: (qty) => setState(
                               () => _draftItems[i] = _draftItems[i].copyWith(quantity: qty)),
+                          onApproxQtyChanged: (approx) => setState(
+                              () => _draftItems[i] = _draftItems[i].copyWith(approximateQty: approx)),
                           onCostChanged: (cost) => setState(
                               () => _draftItems[i] = _draftItems[i].copyWith(unitCost: cost)),
                           onRemove: () => _removeItem(i),
@@ -828,7 +839,13 @@ class _ProductPickerTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final stock = ref.watch(inventoryProvider).getStock(branchId, product.id);
+    final invState = ref.watch(inventoryProvider);
+    final isKg = product.isKgProduct;
+    final exactStock = isKg
+        ? invState.getExactStock(branchId, product.id)
+        : invState.getStock(branchId, product.id).toDouble();
+    final approxStock =
+        isKg ? invState.getApproxStock(branchId, product.id) : 0;
 
     return Material(
       color: AppColors.surfaceVariant,
@@ -855,7 +872,7 @@ class _ProductPickerTile extends ConsumerWidget {
                         style: const TextStyle(
                             fontSize: 13, fontWeight: FontWeight.w600)),
                     Text(
-                      'SKU: ${product.sku.isEmpty ? "—" : product.sku}  ·  Cost: ${_mmk.format(product.costPrice)} Ks',
+                      'SKU: ${product.sku.isEmpty ? "—" : product.sku}  ·  Cost: ${_mmk.format(product.costPrice)} ${isKg ? 'Ks/Kg' : 'Ks'}',
                       style: TextStyle(
                           fontSize: 11, color: AppColors.textSecondary),
                     ),
@@ -868,17 +885,19 @@ class _ProductPickerTile extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: stock <= product.minStock
+                      color: exactStock <= product.minStock
                           ? AppColors.warning.withValues(alpha: 0.15)
                           : AppColors.success.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      'Stock: $stock',
+                      isKg
+                          ? 'Stock: ${MockProduct.formatQty(exactStock)} Kg${approxStock > 0 ? ' (~$approxStock ခု)' : ''}'
+                          : 'Stock: ${invState.getStock(branchId, product.id)}',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: stock <= product.minStock
+                        color: exactStock <= product.minStock
                             ? AppColors.warning
                             : AppColors.success,
                       ),
@@ -902,13 +921,16 @@ class _ProductPickerTile extends ConsumerWidget {
 // ══════════════════════════════════════════════════════════════
 class _DraftItemRow extends StatefulWidget {
   const _DraftItemRow({
+    super.key,
     required this.item,
     required this.onQtyChanged,
+    this.onApproxQtyChanged,
     required this.onCostChanged,
     required this.onRemove,
   });
   final _DraftItem item;
   final ValueChanged<double> onQtyChanged;
+  final ValueChanged<int>? onApproxQtyChanged;
   final ValueChanged<double> onCostChanged;
   final VoidCallback onRemove;
 
@@ -918,26 +940,49 @@ class _DraftItemRow extends StatefulWidget {
 
 class _DraftItemRowState extends State<_DraftItemRow> {
   late TextEditingController _qtyCtrl;
+  late TextEditingController _approxCtrl;
   late TextEditingController _costCtrl;
 
   @override
   void initState() {
     super.initState();
     _qtyCtrl = TextEditingController(
-        text: widget.item.quantity.toStringAsFixed(0));
+      text: widget.item.isKg
+          ? MockProduct.formatQty(widget.item.quantity)
+          : widget.item.quantity.toStringAsFixed(0),
+    );
+    _approxCtrl = TextEditingController(
+      text: (widget.item.approximateQty ?? 0).toString(),
+    );
     _costCtrl = TextEditingController(
         text: widget.item.unitCost.toStringAsFixed(0));
   }
 
   @override
+  void didUpdateWidget(covariant _DraftItemRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.quantity != widget.item.quantity) {
+      final parsed = double.tryParse(_qtyCtrl.text.trim()) ?? -1;
+      if ((parsed - widget.item.quantity).abs() > 0.0001) {
+        _qtyCtrl.text = widget.item.isKg
+            ? MockProduct.formatQty(widget.item.quantity)
+            : widget.item.quantity.toStringAsFixed(0);
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _qtyCtrl.dispose();
+    _approxCtrl.dispose();
     _costCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isKg = widget.item.isKg;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -949,11 +994,32 @@ class _DraftItemRowState extends State<_DraftItemRow> {
         children: [
           Row(
             children: [
-              Text(
-                widget.item.productName,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 13),
+              Flexible(
+                child: Text(
+                  widget.item.productName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              if (isKg) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'Kg',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.close_rounded, size: 18),
@@ -967,10 +1033,10 @@ class _DraftItemRowState extends State<_DraftItemRow> {
           const SizedBox(height: 8),
           Row(
             children: [
-              // Quantity
+              // Quantity / Total Kg
               Expanded(
                 child: _NumberField(
-                  label: 'အရေအတွက်',
+                  label: isKg ? 'Total Kg' : 'အရေအတွက်',
                   ctrl: _qtyCtrl,
                   onChanged: (v) {
                     final qty = double.tryParse(v) ?? 0;
@@ -978,11 +1044,25 @@ class _DraftItemRowState extends State<_DraftItemRow> {
                   },
                 ),
               ),
-              const SizedBox(width: 10),
+              if (isKg) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _NumberField(
+                    label: 'ခန့်မှန်း (Approx. Qty)',
+                    ctrl: _approxCtrl,
+                    allowDecimal: false,
+                    onChanged: (v) {
+                      final approx = int.tryParse(v.trim()) ?? 0;
+                      if (approx >= 0) widget.onApproxQtyChanged?.call(approx);
+                    },
+                  ),
+                ),
+              ],
+              const SizedBox(width: 8),
               // Unit cost
               Expanded(
                 child: _NumberField(
-                  label: 'တစ်ခု ဝယ်ကျ (Ks)',
+                  label: isKg ? '1 Kg ဝယ်ဈေး (Ks)' : 'တစ်ခု ဝယ်ကျ (Ks)',
                   ctrl: _costCtrl,
                   onChanged: (v) {
                     final cost = double.tryParse(v) ?? 0;
@@ -1023,17 +1103,25 @@ class _NumberField extends StatelessWidget {
     required this.label,
     required this.ctrl,
     required this.onChanged,
+    this.allowDecimal = true,
   });
   final String label;
   final TextEditingController ctrl;
   final ValueChanged<String> onChanged;
+  final bool allowDecimal;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: ctrl,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
+      keyboardType: allowDecimal
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.number,
+      inputFormatters: [
+        allowDecimal
+            ? FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
+            : FilteringTextInputFormatter.digitsOnly,
+      ],
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
@@ -1628,9 +1716,9 @@ class PurchaseDetailDialog extends ConsumerWidget {
                   const Row(
                     children: [
                       Expanded(child: Text('ပစ္စည်း', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                      SizedBox(width: 80, child: Text('အရေ', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                      SizedBox(width: 120, child: Text('တစ်ခု Ks', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                      SizedBox(width: 130, child: Text('စုစုပေါင်း Ks', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      SizedBox(width: 115, child: Text('အရေ / Kg', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      SizedBox(width: 120, child: Text('နှုန်းထား Ks', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      SizedBox(width: 120, child: Text('စုစုပေါင်း Ks', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
                     ],
                   ),
                   const Divider(),
@@ -1639,9 +1727,43 @@ class PurchaseDetailDialog extends ConsumerWidget {
                     child: Row(
                       children: [
                         Expanded(child: Text(item.productName, style: const TextStyle(fontSize: 13))),
-                        SizedBox(width: 80, child: Text(_qty.format(item.quantity), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13))),
-                        SizedBox(width: 120, child: Text(_mmk.format(item.unitCost), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13))),
-                        SizedBox(width: 130, child: Text(_mmk.format(item.totalCost), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
+                        SizedBox(
+                          width: 115,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                item.isKgItem
+                                    ? '${MockProduct.formatQty(item.quantity)} Kg'
+                                    : _qty.format(item.quantity),
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                              ),
+                              if (item.isKgItem && (item.approximateQty ?? 0) > 0)
+                                Text(
+                                  'ခန့်မှန်း ~${item.approximateQty} ခု',
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: 120,
+                          child: Text(
+                            '${_mmk.format(item.unitCost)}${item.isKgItem ? '/Kg' : ''}',
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 120,
+                          child: Text(
+                            _mmk.format(item.totalCost),
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          ),
+                        ),
                       ],
                     ),
                   )),
@@ -2028,19 +2150,30 @@ class _DraftItem {
     required this.productName,
     required this.quantity,
     required this.unitCost,
+    this.approximateQty,
+    this.isKg = false,
   });
 
   final String productId;
   final String productName;
   final double quantity;
   final double unitCost;
+  final int? approximateQty;
+  final bool isKg;
 
   double get totalCost => quantity * unitCost;
 
-  _DraftItem copyWith({double? quantity, double? unitCost}) => _DraftItem(
+  _DraftItem copyWith({
+    double? quantity,
+    double? unitCost,
+    int? approximateQty,
+  }) =>
+      _DraftItem(
         productId: productId,
         productName: productName,
         quantity: quantity ?? this.quantity,
         unitCost: unitCost ?? this.unitCost,
+        approximateQty: approximateQty ?? this.approximateQty,
+        isKg: isKg,
       );
 }

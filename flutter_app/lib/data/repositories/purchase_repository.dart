@@ -27,12 +27,19 @@ class PurchaseRepository {
       final itemMap = it as Map<String, dynamic>;
       final qty = (itemMap['quantity'] is num) ? (itemMap['quantity'] as num).toDouble() : double.tryParse(itemMap['quantity']?.toString() ?? '') ?? 1.0;
       final cost = (itemMap['unit_cost'] is num) ? (itemMap['unit_cost'] as num).toDouble() : double.tryParse(itemMap['unit_cost']?.toString() ?? '') ?? 0.0;
+      final rawApprox = itemMap['approximate_qty'] ?? itemMap['approximateQty'];
+      final approxQty = rawApprox is num
+          ? rawApprox.toInt()
+          : int.tryParse(rawApprox?.toString() ?? '');
+      final unitMeasure = itemMap['unit_of_measure']?.toString();
 
       return PurchaseItem(
         productId: itemMap['product_id']?.toString() ?? '',
         productName: itemMap['product_name_snapshot']?.toString() ?? itemMap['product_name']?.toString() ?? '',
         quantity: qty,
         unitCost: cost,
+        approximateQty: approxQty,
+        unitOfMeasure: unitMeasure,
       );
     }).toList();
 
@@ -104,6 +111,7 @@ class PurchaseRepository {
         'productId': i.productId,
         'productName': i.productName,
         'quantity': i.quantity,
+        if (i.approximateQty != null) 'approximateQty': i.approximateQty,
         'unitCost': i.unitCost,
       }).toList(),
     };

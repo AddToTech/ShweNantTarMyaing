@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -118,8 +119,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   }
 
   void _showAdjustStockDialog(ProductWithStock item) {
-    final qtyCtrl = TextEditingController(text: '${item.stock}');
-    showDialog(
+    final isKg = item.product.isKgProduct;
+    final qtyCtrl = TextEditingController(
+      text: isKg ? MockProduct.formatQty(item.displayStock) : '${item.stock}',
+    );
+    final approxCtrl = TextEditingController(text: '${item.approximateQty}');
+    showDialog<void>(
       context: context,
       builder: (ctx) {
         return AlertDialog(
@@ -139,21 +144,52 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'လက်ရှိ ရေတွက်ရရှိသော အရေအတွက် (Physical count):',
+                isKg
+                    ? 'လက်ရှိ စုစုပေါင်းအလေးချိန် (Total Kg):'
+                    : 'လက်ရှိ ရေတွက်ရရှိသော အရေအတွက် (Physical count):',
                 style: TextStyle(color: AppColors.textMuted, fontSize: 12),
               ),
               const SizedBox(height: 6),
               TextField(
                 controller: qtyCtrl,
-                keyboardType: TextInputType.number,
+                keyboardType: isKg
+                    ? const TextInputType.numberWithOptions(decimal: true)
+                    : TextInputType.number,
+                inputFormatters: [
+                  if (isKg)
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))
+                  else
+                    FilteringTextInputFormatter.digitsOnly,
+                ],
                 autofocus: true,
                 style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                 decoration: InputDecoration(
+                  suffixText: isKg ? 'Kg' : null,
                   filled: true,
                   fillColor: AppColors.surfaceVariant,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
+              if (isKg) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'ခန့်မှန်း အရေအတွက် (Approximate Quantity):',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: approxCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    suffixText: 'ခု',
+                    filled: true,
+                    fillColor: AppColors.surfaceVariant,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
             ],
           ),
           actions: [
@@ -163,6 +199,32 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                if (isKg) {
+                  final kgVal = double.tryParse(qtyCtrl.text.trim());
+                  final approxVal = int.tryParse(approxCtrl.text.trim()) ?? 0;
+                  if (kgVal != null && kgVal >= 0 && approxVal >= 0) {
+                    final ok = await ref.read(inventoryProvider.notifier).setStock(
+                          _selectedBranch,
+                          item.product.id,
+                          kgVal,
+                          approximateQuantity: approxVal,
+                        );
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                    if (ok && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${item.product.name} လက်ကျန်ကို ${MockProduct.formatQty(kgVal)} Kg (ခန့်မှန်း ~$approxVal ခု) အဖြစ် သိမ်းဆည်းပြီးပါပြီ။',
+                          ),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
+                  }
+                  return;
+                }
+
                 final qty = int.tryParse(qtyCtrl.text.trim());
                 if (qty != null && qty >= 0) {
                   final ok = await ref.read(inventoryProvider.notifier).setStock(
@@ -191,7 +253,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
           ],
         );
       },
-    );
+    ).whenComplete(() {
+      qtyCtrl.dispose();
+      approxCtrl.dispose();
+    });
   }
 
   @override
@@ -249,7 +314,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     // Summary metrics
     final totalSkus = filtered.length;
     final totalUnits = filtered.fold(0, (sum, i) => sum + i.stock);
-    final totalValuation = filtered.fold(0.0, (sum, i) => sum + (i.stock * i.product.costPrice));
+    final totalValuation = filtered.fold(0.0, (sum, i) => sum + (i.displayStock * i.product.costPrice));
     final lowStockCount = filtered.where((i) => i.isLowStock).length;
 
     return Container(
@@ -654,11 +719,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'ရောင်းဈေး: ${currencyFmt.format(p.salePrice)} ကျပ်',
+                                    'ရောင်းဈေး: ${currencyFmt.format(p.salePrice)} ${p.isKgProduct ? 'ကျပ်/Kg' : 'ကျပ်'}',
                                     style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
                                   ),
                                   Text(
-                                    'အရင်း: ${currencyFmt.format(p.costPrice)} ကျပ်',
+                                    'အရင်း: ${currencyFmt.format(p.costPrice)} ${p.isKgProduct ? 'ကျပ်/Kg' : 'ကျပ်'}',
                                     style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
                                   ),
                                 ],
@@ -668,7 +733,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                             // Stock status
                             Expanded(
                               flex: 2,
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -688,7 +754,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                       ),
                                     ),
                                     child: Text(
-                                      isOut ? 'ပစ္စည်းပြတ် (OUT OF STOCK)' : 'လက်ကျန် ${item.stock} ခု',
+                                      isOut
+                                          ? 'ပစ္စည်းပြတ် (OUT OF STOCK)'
+                                          : (p.isKgProduct
+                                              ? 'လက်ကျန် ${MockProduct.formatQty(item.displayStock)} Kg'
+                                              : 'လက်ကျန် ${item.stock} ခု'),
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -700,6 +770,18 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                       ),
                                     ),
                                   ),
+                                  if (p.isKgProduct && !isOut && item.approximateQty > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 3, left: 2),
+                                      child: Text(
+                                        'ခန့်မှန်း ~${item.approximateQty} ခု',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),

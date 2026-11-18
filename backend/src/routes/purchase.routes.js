@@ -27,6 +27,8 @@ router.get('/purchases', async (req, res, next) => {
                    'product_id', pi.product_id,
                    'product_name_snapshot', pi.product_name_snapshot,
                    'quantity', pi.quantity,
+                   'approximate_qty', pi.approximate_qty,
+                   'unit_of_measure', COALESCE(pr.unit_of_measure, 'piece'),
                    'unit_cost', pi.unit_cost
                  )
                ) FILTER (WHERE pi.id IS NOT NULL),
@@ -37,6 +39,7 @@ router.get('/purchases', async (req, res, next) => {
       LEFT JOIN branches b ON p.branch_id = b.id
       LEFT JOIN users u ON p.created_by = u.id
       LEFT JOIN purchase_items pi ON p.id = pi.purchase_id
+      LEFT JOIN products pr ON pi.product_id = pr.id
       WHERE 1=1
     `;
 
@@ -106,7 +109,7 @@ router.get('/purchases/:id', async (req, res, next) => {
     }
 
     const itemsRes = await query(
-      `SELECT pi.*, p.sku, p.barcode
+      `SELECT pi.*, p.sku, p.barcode, COALESCE(p.unit_of_measure, 'piece') AS unit_of_measure
        FROM purchase_items pi
        LEFT JOIN products p ON pi.product_id = p.id
        WHERE pi.purchase_id = $1
@@ -158,17 +161,28 @@ router.post('/purchases', requireRole('owner', 'manager'), async (req, res, next
 
     for (const item of items) {
       const resolvedProdId = (await resolveProductId(item.productId)) || item.productId;
-      const prodRes = await client.query('SELECT name FROM products WHERE id = $1', [resolvedProdId]);
+      const prodRes = await client.query(
+        `SELECT name, COALESCE(unit_of_measure, 'piece') AS unit_of_measure FROM products WHERE id = $1`,
+        [resolvedProdId]
+      );
       const prodName = prodRes.rows[0]?.name || item.productName || 'Product';
+      const prodUnit = prodRes.rows[0]?.unit_of_measure || 'piece';
       const qty = Number(item.quantity) || 0;
       const cost = Number(item.unitCost) || 0;
+      const rawApprox = item.approximateQty ?? item.approximate_qty;
+      const approxQty =
+        rawApprox !== undefined && rawApprox !== null && rawApprox !== ''
+          ? Math.max(0, Math.round(Number(rawApprox) || 0))
+          : null;
       const lineTotal = qty * cost;
       subtotal += lineTotal;
 
       computedItems.push({
         productId: resolvedProdId,
         productName: prodName,
+        unitOfMeasure: prodUnit,
         quantity: qty,
+        approximateQty: approxQty,
         unitCost: cost,
         totalCost: lineTotal,
       });
@@ -230,12 +244,12 @@ router.post('/purchases', requireRole('owner', 'manager'), async (req, res, next
     for (const item of computedItems) {
       const itemRes = await client.query(
         `INSERT INTO purchase_items (
-          purchase_id, product_id, product_name_snapshot, quantity, unit_cost
-        ) VALUES ($1, $2, $3, $4, $5)
+          purchase_id, product_id, product_name_snapshot, quantity, approximate_qty, unit_cost
+        ) VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *`,
-        [createdPurchase.id, item.productId, item.productName, item.quantity, item.unitCost]
+        [createdPurchase.id, item.productId, item.productName, item.quantity, item.approximateQty, item.unitCost]
       );
-      savedItems.push(itemRes.rows[0]);
+      savedItems.push({ ...itemRes.rows[0], unit_of_measure: item.unitOfMeasure });
     }
 
     // 5. If requested, apply to inventory immediately

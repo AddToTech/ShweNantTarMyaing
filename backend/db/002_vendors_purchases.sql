@@ -75,6 +75,7 @@ CREATE TABLE purchase_items (
   product_name_snapshot VARCHAR(200) NOT NULL,
 
   quantity              NUMERIC(10,2) NOT NULL,
+  approximate_qty       INT,
   unit_cost             NUMERIC(14,2) NOT NULL,
   total_cost            NUMERIC(14,2) GENERATED ALWAYS AS (quantity * unit_cost) STORED,
 
@@ -98,23 +99,26 @@ BEGIN
   SELECT branch_id INTO p_branch_id FROM purchases WHERE id = p_purchase_id;
 
   FOR rec IN
-    SELECT pi.product_id, pi.quantity, pi.unit_cost
+    SELECT pi.product_id, pi.quantity, pi.unit_cost, COALESCE(pi.approximate_qty, 0) AS approximate_qty
     FROM purchase_items pi
     WHERE pi.purchase_id = p_purchase_id
   LOOP
-    -- Upsert branch inventory
-    INSERT INTO branch_inventories (branch_id, product_id, stock_quantity)
-    VALUES (p_branch_id, rec.product_id, rec.quantity)
+    -- Upsert branch inventory (stock_quantity stores Kg for Kg products)
+    INSERT INTO branch_inventories (branch_id, product_id, stock_quantity, approximate_quantity)
+    VALUES (p_branch_id, rec.product_id, rec.quantity, rec.approximate_qty)
     ON CONFLICT (branch_id, product_id)
     DO UPDATE SET
-      stock_quantity = branch_inventories.stock_quantity + rec.quantity,
-      updated_at     = NOW();
+      stock_quantity       = branch_inventories.stock_quantity + rec.quantity,
+      approximate_quantity = branch_inventories.approximate_quantity + rec.approximate_qty,
+      updated_at           = NOW();
 
     -- Update product's default cost_price to latest invoice unit cost
-    UPDATE products
-    SET cost_price = rec.unit_cost,
-        updated_at = NOW()
-    WHERE id = rec.product_id;
+    IF rec.unit_cost > 0 THEN
+      UPDATE products
+      SET cost_price = rec.unit_cost,
+          updated_at = NOW()
+      WHERE id = rec.product_id;
+    END IF;
   END LOOP;
 END;
 $$ LANGUAGE plpgsql;

@@ -10,7 +10,7 @@ router.get('/inventory/branch/:branchId', async (req, res, next) => {
     const targetBranchId = await resolveBranchId(req.params.branchId);
     const sql = `
       SELECT 
-        bi.id, bi.branch_id, bi.product_id, bi.stock_quantity, bi.min_alert_threshold,
+        bi.id, bi.branch_id, bi.product_id, bi.stock_quantity, COALESCE(bi.approximate_quantity, 0) AS approximate_quantity, bi.min_alert_threshold,
         bi.last_counted_at,
         p.name AS product_name, p.sku, p.barcode, p.sale_price, p.cost_price,
         p.origin_type, COALESCE(po.name, p.origin_type) AS origin_name, p.size_label, p.unit_of_measure, p.image_url,
@@ -53,7 +53,9 @@ router.get('/inventory/low-stock/:branchId', async (req, res, next) => {
 // POST /api/v1/inventory/adjust — manual stock adjustment (manager/owner)
 router.post('/inventory/adjust', authenticate, requireRole('owner', 'manager'), async (req, res, next) => {
   try {
-    const { branchId, productId, newQuantity, deltaQuantity, reason, minAlertThreshold } = req.body;
+    const { branchId, productId, newQuantity, deltaQuantity, reason, minAlertThreshold, approximateQuantity } = req.body;
+    const hasApprox = approximateQuantity !== undefined && approximateQuantity !== null;
+    const parsedApprox = hasApprox ? Math.max(0, Math.round(Number(approximateQuantity) || 0)) : null;
 
     if (!branchId || !productId) {
       return res.status(400).json({
@@ -70,32 +72,34 @@ router.post('/inventory/adjust', authenticate, requireRole('owner', 'manager'), 
 
     if (newQuantity !== undefined) {
       updateSql = `
-        INSERT INTO branch_inventories (branch_id, product_id, stock_quantity, min_alert_threshold, last_counted_at, last_counted_by, updated_at)
-        VALUES ($1, $2, $3, COALESCE($4, 5), NOW(), $5, NOW())
+        INSERT INTO branch_inventories (branch_id, product_id, stock_quantity, approximate_quantity, min_alert_threshold, last_counted_at, last_counted_by, updated_at)
+        VALUES ($1, $2, $3, COALESCE($6, 0), COALESCE($4, 5), NOW(), $5, NOW())
         ON CONFLICT (branch_id, product_id)
         DO UPDATE SET
           stock_quantity = EXCLUDED.stock_quantity,
+          approximate_quantity = COALESCE($6, branch_inventories.approximate_quantity),
           min_alert_threshold = COALESCE($4, branch_inventories.min_alert_threshold),
           last_counted_at = NOW(),
           last_counted_by = $5,
           updated_at = NOW()
         RETURNING *
       `;
-      params = [targetBranchId, targetProductId, Math.max(0, Number(newQuantity)), minAlertThreshold || null, req.user?.id || null];
+      params = [targetBranchId, targetProductId, Math.max(0, Number(newQuantity)), minAlertThreshold || null, req.user?.id || null, parsedApprox];
     } else if (deltaQuantity !== undefined) {
       updateSql = `
-        INSERT INTO branch_inventories (branch_id, product_id, stock_quantity, min_alert_threshold, last_counted_at, last_counted_by, updated_at)
-        VALUES ($1, $2, GREATEST(0, $3), COALESCE($4, 5), NOW(), $5, NOW())
+        INSERT INTO branch_inventories (branch_id, product_id, stock_quantity, approximate_quantity, min_alert_threshold, last_counted_at, last_counted_by, updated_at)
+        VALUES ($1, $2, GREATEST(0, $3), COALESCE($6, 0), COALESCE($4, 5), NOW(), $5, NOW())
         ON CONFLICT (branch_id, product_id)
         DO UPDATE SET
           stock_quantity = GREATEST(0, branch_inventories.stock_quantity + $3),
+          approximate_quantity = GREATEST(0, branch_inventories.approximate_quantity + COALESCE($6, 0)),
           min_alert_threshold = COALESCE($4, branch_inventories.min_alert_threshold),
           last_counted_at = NOW(),
           last_counted_by = $5,
           updated_at = NOW()
         RETURNING *
       `;
-      params = [targetBranchId, targetProductId, Number(deltaQuantity), minAlertThreshold || null, req.user?.id || null];
+      params = [targetBranchId, targetProductId, Number(deltaQuantity), minAlertThreshold || null, req.user?.id || null, parsedApprox];
     } else if (minAlertThreshold !== undefined) {
       updateSql = `
         UPDATE branch_inventories

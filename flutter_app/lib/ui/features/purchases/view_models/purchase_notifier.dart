@@ -36,21 +36,35 @@ class PurchaseItem {
     required this.productName,
     required this.quantity,
     required this.unitCost,
+    this.approximateQty,
+    this.unitOfMeasure,
   });
 
   final String productId;
   final String productName;
-  final double quantity;
+  final double quantity; // Pieces for normal products; Total Kg for Kg products
   final double unitCost;
+  final int? approximateQty; // Approximate piece count when buying in Kg
+  final String? unitOfMeasure;
+
+  bool get isKgItem =>
+      unitOfMeasure?.toLowerCase() == 'kg' || approximateQty != null;
 
   double get totalCost => quantity * unitCost;
 
-  PurchaseItem copyWith({double? quantity, double? unitCost}) {
+  PurchaseItem copyWith({
+    double? quantity,
+    double? unitCost,
+    int? approximateQty,
+    String? unitOfMeasure,
+  }) {
     return PurchaseItem(
       productId: productId,
       productName: productName,
       quantity: quantity ?? this.quantity,
       unitCost: unitCost ?? this.unitCost,
+      approximateQty: approximateQty ?? this.approximateQty,
+      unitOfMeasure: unitOfMeasure ?? this.unitOfMeasure,
     );
   }
 }
@@ -188,10 +202,15 @@ class PurchaseNotifier extends Notifier<PurchaseState> {
         purchases: [created, ...state.purchases],
       );
 
-      // Increment branch inventory for each item
+      // Increment branch inventory for each item (supporting fractional Kg + approx qty)
       final invNotifier = ref.read(inventoryProvider.notifier);
       for (final item in items) {
-        invNotifier.addStock(branchId, item.productId, item.quantity.toInt());
+        invNotifier.addStockExact(
+          branchId,
+          item.productId,
+          item.quantity,
+          approximateQuantity: item.approximateQty,
+        );
       }
 
       // Reload catalog to reflect updated cost prices from server

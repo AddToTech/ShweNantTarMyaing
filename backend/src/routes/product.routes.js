@@ -363,12 +363,18 @@ router.get('/products', optionalAuth, async (req, res, next) => {
         v.name AS vendor_name,
         COALESCE(po.name, p.origin_type) AS origin_name,
         COALESCE(bi.stock_quantity, 0) AS stock_quantity,
+        COALESCE(bi.approximate_quantity, 0) AS approximate_quantity,
         COALESCE(bi.min_alert_threshold, 5) AS min_alert_threshold,
         (
           SELECT COALESCE(jsonb_object_agg(bi2.branch_id::text, bi2.stock_quantity), '{}'::jsonb)
           FROM branch_inventories bi2
           WHERE bi2.product_id = p.id
-        ) AS branch_stocks
+        ) AS branch_stocks,
+        (
+          SELECT COALESCE(jsonb_object_agg(bi3.branch_id::text, bi3.approximate_quantity), '{}'::jsonb)
+          FROM branch_inventories bi3
+          WHERE bi3.product_id = p.id
+        ) AS branch_approx_stocks
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN subcategories s ON p.subcategory_id = s.id
@@ -527,6 +533,7 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
       stockBranchA,
       stockBranchB,
       branchStocks = {},
+      branchApproxStocks = {},
       branchId,
     } = req.body;
 
@@ -628,11 +635,24 @@ router.post('/products', authenticate, requireRole('owner', 'manager'), async (r
       else if (targetBranchId && b.id === targetBranchId) stock = Number(initialStock) || 0;
       else if (i === 0) stock = Number(initialStock) || 0;
 
+      let approxQty = 0;
+      if (branchApproxStocks && typeof branchApproxStocks === 'object') {
+        const approxVal =
+          branchApproxStocks[b.id] ??
+          branchApproxStocks[b.name] ??
+          (i === 0 ? branchApproxStocks['branch_a'] : (i === 1 ? branchApproxStocks['branch_b'] : undefined));
+        if (approxVal !== undefined) {
+          approxQty = Math.max(0, Math.round(Number(approxVal) || 0));
+        }
+      }
+
       await client.query(
-        `INSERT INTO branch_inventories (branch_id, product_id, stock_quantity, min_alert_threshold)
-         VALUES ($1, $2, $3, 5)
-         ON CONFLICT (branch_id, product_id) DO UPDATE SET stock_quantity = EXCLUDED.stock_quantity`,
-        [b.id, createdProduct.id, stock]
+        `INSERT INTO branch_inventories (branch_id, product_id, stock_quantity, approximate_quantity, min_alert_threshold)
+         VALUES ($1, $2, $3, $4, 5)
+         ON CONFLICT (branch_id, product_id)
+         DO UPDATE SET stock_quantity = EXCLUDED.stock_quantity,
+                       approximate_quantity = EXCLUDED.approximate_quantity`,
+        [b.id, createdProduct.id, stock, approxQty]
       );
     }
 

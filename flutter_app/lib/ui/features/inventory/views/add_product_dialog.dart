@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -58,6 +59,23 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
   final _minStockCtrl = TextEditingController(text: '5');
   final _sizeLabelCtrl = TextEditingController();
   final Map<String, TextEditingController> _branchStockCtrls = {};
+  final Map<String, TextEditingController> _branchApproxCtrls = {};
+
+  bool get _isKgSelected {
+    final cats = ref.read(categoryNotifierProvider);
+    if (_selectedCategoryId != null) {
+      final matched =
+          cats.where((c) => c.id == _selectedCategoryId).firstOrNull;
+      if (matched != null) return matched.isKgCategory;
+    }
+    if (_selectedCategoryName != null) {
+      final lower = _selectedCategoryName!.toLowerCase();
+      return lower == 'kg sell' ||
+          lower.contains('kg အရောင်း') ||
+          lower == 'kg';
+    }
+    return widget.productToEdit?.isKgProduct ?? false;
+  }
 
   ProductCategory _category = ProductCategory.plants;
   String? _selectedCategoryId;
@@ -107,10 +125,24 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       _customImagePath = p.customImagePath;
 
       if (widget.initialBranchStockA != null) {
-        _branchStockCtrls['branch_a'] = TextEditingController(text: widget.initialBranchStockA.toString());
+        final exactA = p.isKgProduct
+            ? ref.read(inventoryProvider).getExactStock('branch_a', p.id)
+            : null;
+        _branchStockCtrls['branch_a'] = TextEditingController(
+          text: exactA != null
+              ? MockProduct.formatQty(exactA)
+              : widget.initialBranchStockA.toString(),
+        );
       }
       if (widget.initialBranchStockB != null) {
-        _branchStockCtrls['branch_b'] = TextEditingController(text: widget.initialBranchStockB.toString());
+        final exactB = p.isKgProduct
+            ? ref.read(inventoryProvider).getExactStock('branch_b', p.id)
+            : null;
+        _branchStockCtrls['branch_b'] = TextEditingController(
+          text: exactB != null
+              ? MockProduct.formatQty(exactB)
+              : widget.initialBranchStockB.toString(),
+        );
       }
     } else {
       _generateSkuAndBarcode();
@@ -129,18 +161,23 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
     for (final c in _branchStockCtrls.values) {
       c.dispose();
     }
+    for (final c in _branchApproxCtrls.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
   void _generateSkuAndBarcode() {
-    final prefix = switch (_category) {
-      ProductCategory.plants => 'PLT',
-      ProductCategory.pots => 'POT',
-      ProductCategory.chemicals => 'CHM',
-      ProductCategory.tools => 'TLS',
-      ProductCategory.others => 'OTH',
-      ProductCategory.all => 'PRD',
-    };
+    final prefix = _isKgSelected
+        ? 'KG'
+        : switch (_category) {
+            ProductCategory.plants => 'PLT',
+            ProductCategory.pots => 'POT',
+            ProductCategory.chemicals => 'CHM',
+            ProductCategory.tools => 'TLS',
+            ProductCategory.others => 'OTH',
+            ProductCategory.all => 'PRD',
+          };
     final timestamp = DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase();
     final randNum = (100 + Random().nextInt(900)).toString();
     _skuCtrl.text = '$prefix-$timestamp-$randNum';
@@ -164,9 +201,11 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
           ? item.subcategories
           : _getSubcategories(_category);
       _subcategory = subs.isNotEmpty ? subs.first : 'အထွေထွေ';
-      final emojis = item.standardCategory != null
-          ? (_categoryEmojis[item.standardCategory!] ?? [item.emoji])
-          : [item.emoji, '📦', '🏷️', '🌿', '🪴'];
+      final emojis = item.isKgCategory
+          ? ['🏺', item.emoji, '⚖️', '🪨', '📦']
+          : (item.standardCategory != null
+              ? (_categoryEmojis[item.standardCategory!] ?? [item.emoji])
+              : [item.emoji, '📦', '🏷️', '🌿', '🪴']);
       _selectedEmoji = emojis.first;
       if (!widget.isEditing) {
         _generateSkuAndBarcode();
@@ -204,16 +243,32 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
     if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
+    final isKg = _isKgSelected;
     final salePrice = double.tryParse(_salePriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
     final costPrice = double.tryParse(_costPriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
     final minStock = int.tryParse(_minStockCtrl.text.trim()) ?? 5;
 
     final branchStocks = <String, int>{};
+    final exactBranchStocks = <String, double>{};
+    final branchApproxStocks = <String, int>{};
     for (final entry in _branchStockCtrls.entries) {
-      final qty = int.tryParse(entry.value.text.trim()) ?? 0;
-      branchStocks[entry.key] = qty;
+      if (isKg) {
+        final kgVal = double.tryParse(entry.value.text.trim()) ?? 0.0;
+        exactBranchStocks[entry.key] = kgVal;
+        branchStocks[entry.key] = kgVal.round();
+      } else {
+        final qty = int.tryParse(entry.value.text.trim()) ?? 0;
+        branchStocks[entry.key] = qty;
+      }
+    }
+    if (isKg) {
+      for (final entry in _branchApproxCtrls.entries) {
+        final approx = int.tryParse(entry.value.text.trim()) ?? 0;
+        branchApproxStocks[entry.key] = approx;
+      }
     }
     final firstStock = branchStocks.values.firstOrNull ?? 0;
+    final firstApprox = branchApproxStocks.values.firstOrNull;
 
     setState(() => _isSaving = true);
 
@@ -240,11 +295,15 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
           clearCustomImage: _customImagePath == null,
           sku: _skuCtrl.text.trim(),
           barcode: _barcodeCtrl.text.trim().isNotEmpty ? _barcodeCtrl.text.trim() : null,
+          unitOfMeasure: isKg ? 'kg' : 'piece',
+          approximateQuantity: isKg ? firstApprox : null,
         );
 
         final ok = await ref.read(catalogProvider.notifier).updateProduct(
               updatedProduct,
               branchStocks: branchStocks,
+              exactBranchStocks: exactBranchStocks,
+              branchApproxStocks: branchApproxStocks,
             );
 
         if (!ok || !mounted) return;
@@ -298,12 +357,16 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
             ? _skuCtrl.text.trim()
             : 'PRD-${DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase()}',
         barcode: _barcodeCtrl.text.trim().isNotEmpty ? _barcodeCtrl.text.trim() : null,
+        unitOfMeasure: isKg ? 'kg' : 'piece',
+        approximateQuantity: isKg ? firstApprox : null,
       );
 
       // Save to catalog & initialize branch stocks
       final ok = await ref.read(catalogProvider.notifier).addProduct(
         newProduct,
         branchStocks: branchStocks,
+        exactBranchStocks: exactBranchStocks,
+        branchApproxStocks: branchApproxStocks,
       );
 
       if (!ok || !mounted) return;
@@ -424,6 +487,8 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(categoryNotifierProvider);
+    final isKg = _isKgSelected;
     final currencyFmt = NumberFormat('#,###');
     final sale = double.tryParse(_salePriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
     final cost = double.tryParse(_costPriceCtrl.text.replaceAll(',', '').trim()) ?? 0;
@@ -1051,7 +1116,9 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'PRICING & PROFIT MARGIN (ဈေးနှုန်းနှင့် အမြတ်ငွေ)',
+                                  isKg
+                                      ? 'PRICING & PROFIT MARGIN (1 Kg ဈေးနှုန်းနှင့် အမြတ်ငွေ)'
+                                      : 'PRICING & PROFIT MARGIN (ဈေးနှုန်းနှင့် အမြတ်ငွေ)',
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
                                     fontSize: 11,
@@ -1069,7 +1136,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      'Margin: ${marginPct.toStringAsFixed(1)}% (+${currencyFmt.format(marginVal)} Ks)',
+                                      'Margin: ${marginPct.toStringAsFixed(1)}% (+${currencyFmt.format(marginVal)} ${isKg ? 'Ks/Kg' : 'Ks'})',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -1088,7 +1155,9 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Sale Price (ရောင်းဈေး MMK) *',
+                                        isKg
+                                            ? '1 Kg Sale Price (1 Kg ရောင်းဈေး MMK) *'
+                                            : 'Sale Price (ရောင်းဈေး MMK) *',
                                         style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
                                       ),
                                       const SizedBox(height: 6),
@@ -1098,9 +1167,9 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                                         onChanged: (_) => setState(() {}),
                                         style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                                         decoration: InputDecoration(
-                                          hintText: 'e.g. 25,000',
+                                          hintText: isKg ? 'e.g. 5,000' : 'e.g. 25,000',
                                           hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                                          suffixText: 'Ks',
+                                          suffixText: isKg ? 'Ks/Kg' : 'Ks',
                                           filled: true,
                                           fillColor: AppColors.surface,
                                           border: OutlineInputBorder(
@@ -1126,7 +1195,9 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Cost Price (အရင်းဈေး MMK) *',
+                                        isKg
+                                            ? '1 Kg Cost Price (1 Kg အရင်းဈေး MMK) *'
+                                            : 'Cost Price (အရင်းဈေး MMK) *',
                                         style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
                                       ),
                                       const SizedBox(height: 6),
@@ -1136,9 +1207,9 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                                         onChanged: (_) => setState(() {}),
                                         style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                                         decoration: InputDecoration(
-                                          hintText: 'e.g. 15,000',
+                                          hintText: isKg ? 'e.g. 3,000' : 'e.g. 15,000',
                                           hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
-                                          suffixText: 'Ks',
+                                          suffixText: isKg ? 'Ks/Kg' : 'Ks',
                                           filled: true,
                                           fillColor: AppColors.surface,
                                           border: OutlineInputBorder(
@@ -1167,8 +1238,12 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                       // ── Initial Stock Setup ───────────────────────────
                       Text(
                         widget.isEditing
-                            ? 'STOCK QUANTITY (ဆိုင်ခွဲအလိုက် လက်ကျန်အရေအတွက် ပြင်ဆင်ခြင်း)'
-                            : 'INITIAL STOCK ALLOCATION (ဆိုင်ခွဲအလိုက် စတင်လက်ကျန်)',
+                            ? (isKg
+                                ? 'KG STOCK & APPROXIMATE QUANTITY (ဆိုင်ခွဲအလိုက် စုစုပေါင်း Kg နှင့် ခန့်မှန်းအရေအတွက်)'
+                                : 'STOCK QUANTITY (ဆိုင်ခွဲအလိုက် လက်ကျန်အရေအတွက် ပြင်ဆင်ခြင်း)')
+                            : (isKg
+                                ? 'INITIAL KG STOCK & APPROXIMATE QUANTITY (ဆိုင်ခွဲအလိုက် စတင် Kg နှင့် ခန့်မှန်းအရေအတွက်)'
+                                : 'INITIAL STOCK ALLOCATION (ဆိုင်ခွဲအလိုက် စတင်လက်ကျန်)'),
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 11,
@@ -1185,17 +1260,140 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                             final ctrl = _branchStockCtrls.putIfAbsent(
                               branch.id,
                               () {
-                                final invStock = widget.isEditing
-                                    ? ref.read(inventoryProvider).getStock(branch.id, widget.productToEdit?.id ?? '')
-                                    : null;
-                                final defaultStock = invStock ?? 0;
-                                return TextEditingController(text: defaultStock.toString());
+                                if (widget.isEditing) {
+                                  final inv = ref.read(inventoryProvider);
+                                  if (isKg || (widget.productToEdit?.isKgProduct ?? false)) {
+                                    final exactVal = inv.getExactStock(branch.id, widget.productToEdit?.id ?? '');
+                                    return TextEditingController(text: MockProduct.formatQty(exactVal));
+                                  }
+                                  return TextEditingController(
+                                    text: inv.getStock(branch.id, widget.productToEdit?.id ?? '').toString(),
+                                  );
+                                }
+                                return TextEditingController(text: '0');
+                              },
+                            );
+                            final approxCtrl = _branchApproxCtrls.putIfAbsent(
+                              branch.id,
+                              () {
+                                final approxStock = widget.isEditing
+                                    ? ref.read(inventoryProvider).getApproxStock(
+                                          branch.id,
+                                          widget.productToEdit?.id ?? '',
+                                        )
+                                    : 0;
+                                return TextEditingController(text: approxStock.toString());
                               },
                             );
 
                             final displayName = branch.name.length > 22
                                 ? '${branch.name.substring(0, 20)}...'
                                 : branch.name;
+
+                            if (isKg) {
+                              return Container(
+                                width: 340,
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceVariant.withValues(alpha: 0.6),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.store_rounded, size: 14, color: AppColors.primary),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            displayName,
+                                            style: TextStyle(
+                                              color: AppColors.textPrimary,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Total Kg *',
+                                                style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              TextFormField(
+                                                controller: ctrl,
+                                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                inputFormatters: [
+                                                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                                                ],
+                                                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                                                decoration: InputDecoration(
+                                                  hintText: 'e.g. 25.5',
+                                                  suffixText: 'Kg',
+                                                  filled: true,
+                                                  fillColor: AppColors.surface,
+                                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                                ),
+                                                validator: (v) {
+                                                  final parsed = double.tryParse(v?.trim() ?? '');
+                                                  if (parsed == null || parsed < 0) return 'Kg ထည့်ပါ';
+                                                  return null;
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Approx. Qty (ခန့်မှန်း ခု)',
+                                                style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              TextFormField(
+                                                controller: approxCtrl,
+                                                keyboardType: TextInputType.number,
+                                                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                                                decoration: InputDecoration(
+                                                  hintText: 'e.g. 10',
+                                                  suffixText: 'ခု',
+                                                  filled: true,
+                                                  fillColor: AppColors.surface,
+                                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                                ),
+                                                validator: (v) {
+                                                  final parsed = int.tryParse(v?.trim() ?? '');
+                                                  if (parsed == null || parsed < 0) return 'အရေအတွက် ထည့်ပါ';
+                                                  return null;
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
 
                             return SizedBox(
                               width: 220,
@@ -1230,7 +1428,10 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Min Alert Stock:', style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600)),
+                                Text(
+                                  isKg ? 'Min Alert (Kg):' : 'Min Alert Stock:',
+                                  style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                                ),
                                 const SizedBox(height: 4),
                                 TextFormField(
                                   controller: _minStockCtrl,
@@ -1238,6 +1439,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                                   style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                                   decoration: InputDecoration(
                                     prefixIcon: const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.warning),
+                                    suffixText: isKg ? 'Kg' : null,
                                     filled: true,
                                     fillColor: AppColors.surfaceVariant,
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
@@ -1258,20 +1460,23 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
 
             // ── Dialog Actions Footer ───────────────────────────
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               decoration: BoxDecoration(
                 color: AppColors.surfaceVariant,
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
                 border: Border(top: BorderSide(color: AppColors.border)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   TextButton(
                     onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
                     child: Text('Cancel (ပယ်ဖျက်မည်)', style: TextStyle(color: AppColors.textMuted)),
                   ),
-                  const SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: _isSaving ? null : _saveProduct,
                     icon: _isSaving
