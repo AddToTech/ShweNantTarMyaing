@@ -365,7 +365,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                       onChanged: (_) => setState(() {}),
                       style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                       decoration: InputDecoration(
-                        hintText: 'ပစ္စည်းအမည်၊ အမျိုးအစား၊ ကုန်သည်၊ မူရင်းဒေသ၊ SKU ဖြင့် ရှာဖွေပါ...',
+                        hintText: 'ပစ္စည်းအမည်၊ အမျိုးအစား၊ ကုန်သည်၊ မူရင်းဒေသ၊ ဘားကုဒ် ဖြင့် ရှာဖွေပါ...',
                         hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12),
                         prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textMuted),
                         suffixIcon: _searchCtrl.text.isNotEmpty

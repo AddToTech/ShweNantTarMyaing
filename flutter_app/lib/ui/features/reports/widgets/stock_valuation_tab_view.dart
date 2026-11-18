@@ -125,7 +125,7 @@ class StockValuationTabView extends ConsumerWidget {
                           style: TextStyle(
                               color: AppColors.textPrimary, fontSize: 12.5),
                           decoration: InputDecoration(
-                            hintText: 'SKU၊ ဘားကုဒ်၊ ပစ္စည်းအမည် ရှာဖွေပါ...',
+                            hintText: 'ပစ္စည်းအမည် သို့မဟုတ် ဘားကုဒ် ရှာဖွေပါ...',
                             hintStyle: TextStyle(
                                 color: AppColors.textMuted, fontSize: 11.5),
                             border: InputBorder.none,

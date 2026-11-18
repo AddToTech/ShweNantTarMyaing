@@ -169,7 +169,7 @@ final filteredProductsProvider = Provider<List<MockProduct>>((ref) {
     }
   }
 
-  // ── Search query (Item name, Category, Vendor, Plant Origin, SKU, Barcode) ──
+  // ── Search query (Item name, Category, Vendor, Plant Origin, Barcode) ──
   if (filter.searchQuery.isNotEmpty) {
     final catNames = {for (final c in categories) c.id: c.name};
     final vendors = ref.watch(vendorProvider);

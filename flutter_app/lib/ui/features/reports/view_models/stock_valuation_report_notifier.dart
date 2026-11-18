@@ -141,10 +141,9 @@ final stockValuationReportProvider = Provider<StockValuationSummary>((ref) {
     if (filter.searchQuery.isNotEmpty) {
       final q = filter.searchQuery.toLowerCase();
       final nameMatch = item.product.name.toLowerCase().contains(q);
-      final skuMatch = item.product.sku.toLowerCase().contains(q);
       final barcodeMatch =
           item.product.barcode?.toLowerCase().contains(q) ?? false;
-      if (!nameMatch && !skuMatch && !barcodeMatch) return false;
+      if (!nameMatch && !barcodeMatch) return false;
     }
     return true;
   }).toList();

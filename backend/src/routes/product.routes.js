@@ -407,7 +407,7 @@ router.get('/products', optionalAuth, async (req, res, next) => {
 
     if (search) {
       params.push(`%${search}%`);
-      sql += ` AND (p.name ILIKE $${params.length} OR p.sku ILIKE $${params.length} OR p.barcode ILIKE $${params.length})`;
+      sql += ` AND (p.name ILIKE $${params.length} OR p.barcode ILIKE $${params.length})`;
     }
 
     // Last-In, First-Out (LIFO): newest added products first

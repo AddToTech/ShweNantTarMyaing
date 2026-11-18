@@ -1030,7 +1030,7 @@ class _ProductPickerSheetState extends ConsumerState<_ProductPickerSheet> {
               autofocus: true,
               style: TextStyle(color: AppColors.textPrimary),
               decoration: InputDecoration(
-                hintText: 'အပင်အမည်၊ ပန်းအိုး၊ SKU သို့မဟုတ် ဘားကုဒ် ရှာဖွေပါ...',
+                hintText: 'ပစ္စည်းအမည်၊ အမျိုးအစား သို့မဟုတ် ဘားကုဒ် ရှာဖွေပါ...',
                 hintStyle: TextStyle(color: AppColors.textMuted),
                 prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary),
                 filled: true,

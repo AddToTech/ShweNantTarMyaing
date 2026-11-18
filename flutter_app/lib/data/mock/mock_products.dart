@@ -127,7 +127,7 @@ class MockProduct {
   }
 
   /// Checks whether this product matches a comprehensive search query:
-  /// item name, category name, vendor name, plant origin, subcategory, SKU, or barcode.
+  /// item name, category name, vendor name, plant origin, subcategory, or barcode.
   bool matchesSearch(
     String query, {
     Map<String, String>? categoryNames,
@@ -140,8 +140,7 @@ class MockProduct {
     // 1. Item Name
     if (name.toLowerCase().contains(q)) return true;
 
-    // 2. SKU & Barcode
-    if (sku.toLowerCase().contains(q)) return true;
+    // 2. Barcode (exclude auto-generated SKU to avoid substring confusion with item names)
     if (barcode != null && barcode!.toLowerCase().contains(q)) return true;
 
     // 3. Category Name (stored or resolved)
