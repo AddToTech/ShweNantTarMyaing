@@ -300,7 +300,7 @@ class _ReceiptDialogState extends ConsumerState<ReceiptDialog> {
                                                     overflow: TextOverflow.ellipsis)),
                                             Expanded(
                                                 flex: 2,
-                                                child: Text('${item.quantity}',
+                                                child: Text(item.displayQty,
                                                     textAlign: TextAlign.center)),
                                             if (!is58)
                                               Expanded(
@@ -317,6 +317,12 @@ class _ReceiptDialogState extends ConsumerState<ReceiptDialog> {
                                                     textAlign: TextAlign.right)),
                                           ],
                                         ),
+                                        if (item.isKgItem && (item.approximateQty ?? 0) > 0)
+                                          Text(
+                                            '  ~Approx ${item.approximateQty} pcs',
+                                            style: const TextStyle(
+                                                color: Colors.black54, fontSize: 9.5),
+                                          ),
                                         if (item.discountPercent > 0)
                                           Text(
                                             '  * ${item.discountPercent.toStringAsFixed(0)}% Off',

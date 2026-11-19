@@ -13,6 +13,9 @@ class SaleTransactionItem {
     required this.productId,
     required this.productName,
     required this.quantity,
+    this.exactQuantity,
+    this.approximateQty,
+    this.unitOfMeasure,
     required this.unitPrice,
     this.unitCost = 0.0,
     this.discountPercent = 0.0,
@@ -24,12 +27,24 @@ class SaleTransactionItem {
   final String productId;
   final String productName;
   final int quantity;
+  final double? exactQuantity;
+  final int? approximateQty;
+  final String? unitOfMeasure;
   final double unitPrice;
   final double unitCost;
   final double discountPercent;
   final double lineTotal;
   final OriginType? originType;
   final ProductCategory category;
+
+  bool get isKgItem =>
+      unitOfMeasure?.toLowerCase() == 'kg' || approximateQty != null;
+
+  double get effectiveQuantity => exactQuantity ?? quantity.toDouble();
+
+  String get displayQty => isKgItem
+      ? '${MockProduct.formatQty(effectiveQuantity)} Kg'
+      : '$quantity';
 }
 
 class SaleTransaction {

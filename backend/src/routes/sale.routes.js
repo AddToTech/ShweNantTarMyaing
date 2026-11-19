@@ -139,33 +139,53 @@ router.post('/sales', async (req, res, next) => {
         resolvedProdId = fallbackProd.rows[0]?.id || null;
       }
 
+      const rawApprox = item.approximateQty ?? item.approximate_qty;
+      const approxQty =
+        rawApprox !== undefined && rawApprox !== null
+          ? Math.max(0, Math.round(Number(rawApprox) || 0))
+          : null;
+
+      const prodMetaRes = resolvedProdId
+        ? await client.query(
+            'SELECT unit_of_measure FROM products WHERE id = $1 LIMIT 1',
+            [resolvedProdId]
+          )
+        : { rows: [] };
+      const uom =
+        prodMetaRes.rows[0]?.unit_of_measure ||
+        item.unitOfMeasure ||
+        item.unit_of_measure ||
+        'piece';
+
       const itemRes = await client.query(
         `INSERT INTO sale_items (
-          sale_id, product_id, product_name, quantity, unit_price,
+          sale_id, product_id, product_name, quantity, approximate_qty, unit_price,
           discount_pct, discount_percent, line_total
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *`,
         [
           createdSale.id,
           resolvedProdId,
           item.productName,
           item.quantity,
+          approxQty,
           item.unitPrice,
           item.discountPct,
           item.discountPct,
           item.lineTotal,
         ]
       );
-      savedItems.push(itemRes.rows[0]);
+      savedItems.push({ ...itemRes.rows[0], unit_of_measure: uom });
 
-      // Decrement branch inventory
+      // Decrement branch inventory (both stock_quantity and approximate_quantity)
       if (resolvedProdId) {
         await client.query(
           `UPDATE branch_inventories
            SET stock_quantity = GREATEST(0, stock_quantity - $1),
+               approximate_quantity = GREATEST(0, approximate_quantity - COALESCE($4, 0)),
                updated_at = NOW()
            WHERE branch_id = $2 AND product_id = $3`,
-          [item.quantity, targetBranchId, resolvedProdId]
+          [item.quantity, targetBranchId, resolvedProdId, approxQty]
         );
       }
     }
@@ -213,6 +233,8 @@ router.get('/sales', async (req, res, next) => {
                    'product_id', si.product_id,
                    'product_name', si.product_name,
                    'quantity', si.quantity,
+                   'approximate_qty', si.approximate_qty,
+                   'unit_of_measure', p.unit_of_measure,
                    'unit_price', si.unit_price,
                    'discount_percent', si.discount_percent,
                    'line_total', si.line_total
@@ -223,6 +245,7 @@ router.get('/sales', async (req, res, next) => {
       LEFT JOIN users u ON s.cashier_id = u.id
       LEFT JOIN branches b ON s.branch_id = b.id
       LEFT JOIN sale_items si ON s.id = si.sale_id
+      LEFT JOIN products p ON si.product_id = p.id
       WHERE 1=1
     `;
 
@@ -282,7 +305,7 @@ router.get('/sales/:id', async (req, res, next) => {
     }
 
     const itemsRes = await query(
-      `SELECT si.*, p.sku, p.barcode
+      `SELECT si.*, p.sku, p.barcode, p.unit_of_measure
        FROM sale_items si
        LEFT JOIN products p ON si.product_id = p.id
        WHERE si.sale_id = $1
@@ -370,7 +393,7 @@ router.delete('/sales/:id', authenticate, requireDeletePermission, async (req, r
 
     // Fetch sale items to restore stock
     const itemsRes = await client.query(
-      'SELECT product_id, quantity FROM sale_items WHERE sale_id = $1',
+      'SELECT product_id, quantity, COALESCE(approximate_qty, 0) AS approximate_qty FROM sale_items WHERE sale_id = $1',
       [sale.id]
     );
 
@@ -378,11 +401,14 @@ router.delete('/sales/:id', authenticate, requireDeletePermission, async (req, r
     for (const item of itemsRes.rows) {
       if (item.product_id && item.quantity > 0 && sale.branch_id) {
         await client.query(
-          `INSERT INTO branch_inventories (branch_id, product_id, stock_quantity, updated_at)
-           VALUES ($1, $2, $3, NOW())
+          `INSERT INTO branch_inventories (branch_id, product_id, stock_quantity, approximate_quantity, updated_at)
+           VALUES ($1, $2, $3, $4, NOW())
            ON CONFLICT (branch_id, product_id)
-           DO UPDATE SET stock_quantity = branch_inventories.stock_quantity + EXCLUDED.stock_quantity, updated_at = NOW()`,
-          [sale.branch_id, item.product_id, item.quantity]
+           DO UPDATE SET
+             stock_quantity = branch_inventories.stock_quantity + EXCLUDED.stock_quantity,
+             approximate_quantity = branch_inventories.approximate_quantity + EXCLUDED.approximate_quantity,
+             updated_at = NOW()`,
+          [sale.branch_id, item.product_id, item.quantity, item.approximate_qty || 0]
         );
       }
     }

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../data/mock/mock_products.dart';
 import '../../../shared/widgets/product_avatar.dart';
 import '../view_models/cart_notifier.dart';
+import 'kg_sale_input_dialog.dart';
 
 // ============================================================
 // CartItemTile — a single line item in the cart panel
@@ -89,7 +91,9 @@ class _CartItemTileState extends ConsumerState<CartItemTile> {
                       ),
                     ),
                     Text(
-                      '${fmt.format(item.unitPrice)} Ks / unit',
+                      item.isKgItem
+                          ? '${fmt.format(item.unitPrice)} Ks / Kg'
+                          : '${fmt.format(item.unitPrice)} Ks / unit',
                       style: TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 9.5,
@@ -113,15 +117,52 @@ class _CartItemTileState extends ConsumerState<CartItemTile> {
 
           const SizedBox(height: 8),
 
-          // ── Row 2: stepper + discount toggle + line total ─
+          // ── Row 2: stepper / Kg pill + discount toggle + line total ─
           Row(
             children: [
-              // Quantity stepper
-              _QuantityStepper(
-                quantity: item.quantity,
-                onDecrement: () => notifier.decrement(item.product.id),
-                onIncrement: () => notifier.increment(item.product.id),
-              ),
+              // Quantity stepper (normal) OR clickable Kg + Approx Qty editor (Kg items)
+              if (item.isKgItem)
+                InkWell(
+                  onTap: () => KgSaleInputDialog.show(
+                    context,
+                    product: item.product,
+                    existingItem: item,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    height: 28,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.55)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${MockProduct.formatQty(item.effectiveQuantity)} Kg'
+                          '${(item.approximateQty ?? 0) > 0 ? ' · ~${item.approximateQty} ခု' : ''}',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        const Icon(Icons.edit_rounded,
+                            size: 12, color: AppColors.primary),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                _QuantityStepper(
+                  quantity: item.quantity,
+                  onDecrement: () => notifier.decrement(item.product.id),
+                  onIncrement: () => notifier.increment(item.product.id),
+                ),
 
               const SizedBox(width: 8),
 
@@ -159,15 +200,22 @@ class _CartItemTileState extends ConsumerState<CartItemTile> {
                 ),
               ),
 
-              const Spacer(),
+              const SizedBox(width: 6),
 
               // Line total
-              Text(
-                '${fmt.format(item.lineTotal)} Ks',
-                style: const TextStyle(
-                  color: AppColors.accent,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w800,
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '${fmt.format(item.lineTotal)} Ks',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
             ],

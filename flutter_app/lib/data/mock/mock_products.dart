@@ -139,6 +139,54 @@ class MockProduct {
     return false;
   }
 
+  /// Checks whether this product matches a subcategory or plant-origin chip filter.
+  bool matchesSubFilter(
+    String subFilter, {
+    bool isPlantsCategory = false,
+    List<String> originNames = const [],
+  }) {
+    final sub = subFilter.trim();
+    final subLower = sub.toLowerCase();
+    if (sub.isEmpty || subLower == 'all' || sub == 'အားလုံး') {
+      return true;
+    }
+
+    if (isPlantsCategory) {
+      final isKnownOrigin =
+          originNames.any((o) => o.trim().toLowerCase() == subLower) ||
+              subLower.contains('thai') ||
+              subLower.contains('ယိုးဒယား') ||
+              subLower.contains('china') ||
+              subLower.contains('တရုတ်') ||
+              subLower.contains('local') ||
+              subLower.contains('ပြည်တွင်း');
+      if (isKnownOrigin) {
+        if (originName != null &&
+            originName!.trim().toLowerCase() == subLower) {
+          return true;
+        }
+        if (displayOrigin != null &&
+            displayOrigin!.trim().toLowerCase() == subLower) {
+          return true;
+        }
+        if ((subLower.contains('thai') || subLower.contains('ယိုးဒယား')) &&
+            originType == OriginType.thaiImport) {
+          return true;
+        }
+        if ((subLower.contains('china') || subLower.contains('တရုတ်')) &&
+            originType == OriginType.chinaImport) {
+          return true;
+        }
+        if ((subLower.contains('local') || subLower.contains('ပြည်တွင်း')) &&
+            originType == OriginType.local) {
+          return true;
+        }
+      }
+    }
+
+    return subcategory.trim().toLowerCase() == subLower;
+  }
+
   /// Checks whether this product matches a comprehensive search query:
   /// item name, category name, vendor name, plant origin, subcategory, or barcode.
   bool matchesSearch(

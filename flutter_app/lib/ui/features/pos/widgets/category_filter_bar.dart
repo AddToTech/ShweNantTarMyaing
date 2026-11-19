@@ -13,7 +13,40 @@ import '../../settings/view_models/plant_origin_notifier.dart';
 // ============================================================
 
 class CategoryFilterBar extends ConsumerWidget {
-  const CategoryFilterBar({super.key});
+  const CategoryFilterBar({
+    super.key,
+    this.selectedCategoryIdOverride,
+    this.selectedCategoryOverride,
+    this.selectedSubFilterOverride,
+    this.onSelectCategoryItem,
+    this.onSelectSubFilter,
+  });
+
+  final String? selectedCategoryIdOverride;
+  final ProductCategory? selectedCategoryOverride;
+  final String? selectedSubFilterOverride;
+  final ValueChanged<CategoryItem?>? onSelectCategoryItem;
+  final ValueChanged<String>? onSelectSubFilter;
+
+  static List<String> buildSubFiltersForCategory(
+    CategoryItem? catItem,
+    ProductCategory effectiveCategory,
+    List<String> originNames,
+  ) {
+    final dynamicSubList = catItem != null
+        ? ['All', ...catItem.subcategories]
+        : const <String>[];
+    final isPlantsCategory =
+        catItem?.standardCategory == ProductCategory.plants ||
+            (catItem == null && effectiveCategory == ProductCategory.plants);
+    return isPlantsCategory
+        ? [
+            ...dynamicSubList,
+            for (final oName in originNames)
+              if (!dynamicSubList.contains(oName)) oName,
+          ]
+        : dynamicSubList;
+  }
 
   static String _getSubFilterLabel(String sub) => switch (sub) {
     'All' || 'အားလုံး' => 'အားလုံး (All)',
@@ -50,35 +83,39 @@ class CategoryFilterBar extends ConsumerWidget {
     final notifier = ref.read(posFilterProvider.notifier);
     final activeCategories = ref.watch(categoryNotifierProvider);
 
-    final catItem = activeCategories
-        .where((c) =>
-            c.id == filter.selectedCategoryId ||
-            (filter.selectedCategoryId != 'all' &&
-                c.standardCategory != null &&
-                c.standardCategory == filter.selectedCategory))
-        .firstOrNull;
-    final dynamicSubList = catItem != null
-        ? ['All', ...catItem.subcategories]
-        : const <String>[];
+    final selectedCategoryId =
+        selectedCategoryIdOverride ?? filter.selectedCategoryId;
+    final selectedCategory =
+        selectedCategoryOverride ?? filter.selectedCategory;
+    final selectedSubFilter =
+        selectedSubFilterOverride ?? filter.selectedSubFilter;
 
-    final isPlantsCategory =
-        catItem?.standardCategory == ProductCategory.plants ||
-            (catItem == null &&
-                filter.selectedCategory == ProductCategory.plants);
+    final selectCatCallback = onSelectCategoryItem ?? notifier.selectCategoryItem;
+    final selectSubCallback = onSelectSubFilter ?? notifier.selectSubFilter;
+
+    final catItem = activeCategories
+            .where((c) => c.id == selectedCategoryId)
+            .firstOrNull ??
+        (selectedCategoryId != 'all'
+            ? activeCategories
+                .where((c) =>
+                    c.standardCategory != null &&
+                    c.standardCategory == selectedCategory)
+                .firstOrNull
+            : null);
 
     final origins = ref.watch(activePlantOriginsProvider);
     final originNames = origins.map((o) => o.name).toList();
-
-    final subFilters = isPlantsCategory
-        ? [
-            ...dynamicSubList,
-            for (final oName in originNames)
-              if (!dynamicSubList.contains(oName)) oName,
-          ]
-        : dynamicSubList;
+    final subFilters = buildSubFiltersForCategory(
+      catItem,
+      selectedCategory,
+      originNames,
+    );
+    final effectiveSubFilter =
+        subFilters.contains(selectedSubFilter) ? selectedSubFilter : 'All';
 
     final hasSubFilters =
-        filter.selectedCategoryId != 'all' && subFilters.length > 1;
+        selectedCategoryId != 'all' && subFilters.length > 1;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -96,8 +133,8 @@ class CategoryFilterBar extends ConsumerWidget {
                 return _CategoryTab(
                   label: 'အားလုံး (All)',
                   emoji: '🌿',
-                  isSelected: filter.selectedCategoryId == 'all',
-                  onTap: () => notifier.selectCategoryItem(null),
+                  isSelected: selectedCategoryId == 'all',
+                  onTap: () => selectCatCallback(null),
                 );
               }
               final c = activeCategories[i - 1];
@@ -105,14 +142,14 @@ class CategoryFilterBar extends ConsumerWidget {
                       c.englishName.toLowerCase() != c.name.toLowerCase()
                   ? '${c.name} (${c.englishName})'
                   : c.name;
-              final isSelected = filter.selectedCategoryId == c.id ||
+              final isSelected = selectedCategoryId == c.id ||
                   (c.standardCategory != null &&
-                      filter.selectedCategoryId == c.standardCategory!.name);
+                      selectedCategoryId == c.standardCategory!.name);
               return _CategoryTab(
                 label: label,
                 emoji: c.emoji,
                 isSelected: isSelected,
-                onTap: () => notifier.selectCategoryItem(c),
+                onTap: () => selectCatCallback(c),
               );
             },
           ),
@@ -138,8 +175,8 @@ class CategoryFilterBar extends ConsumerWidget {
                       final sub = subFilters[i];
                       return _SubFilterChip(
                         label: _getSubFilterLabel(sub),
-                        isSelected: filter.selectedSubFilter == sub,
-                        onTap: () => notifier.selectSubFilter(sub),
+                        isSelected: effectiveSubFilter == sub,
+                        onTap: () => selectSubCallback(sub),
                       );
                     },
                   ),

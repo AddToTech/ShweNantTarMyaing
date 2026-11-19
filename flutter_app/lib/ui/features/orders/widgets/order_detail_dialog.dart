@@ -290,7 +290,7 @@ class OrderDetailDialog extends StatelessWidget {
                                   Expanded(
                                     flex: 2,
                                     child: Text(
-                                      '${currencyFmt.format(item.unitPrice)} Ks',
+                                      '${currencyFmt.format(item.unitPrice)} Ks${item.isKgItem ? '/Kg' : ''}',
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
                                         color: AppColors.textSecondary,
@@ -300,14 +300,27 @@ class OrderDetailDialog extends StatelessWidget {
                                   ),
                                   Expanded(
                                     flex: 2,
-                                    child: Text(
-                                      '×${item.quantity}',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: AppColors.textPrimary,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          item.isKgItem ? item.displayQty : '×${item.quantity}',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: AppColors.textPrimary,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (item.isKgItem && (item.approximateQty ?? 0) > 0)
+                                          Text(
+                                            'ခန့်မှန်း ~${item.approximateQty} ခု',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: AppColors.textMuted,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
                                   Expanded(

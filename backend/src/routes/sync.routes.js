@@ -99,16 +99,22 @@ router.post('/sync/push', async (req, res, next) => {
           for (const item of sale.items) {
             const resolvedProdId = await resolveProductId(item.productId);
             const disc = item.discountPercent || item.discountPct || 0;
+            const rawApprox = item.approximateQty ?? item.approximate_qty;
+            const approxQty =
+              rawApprox !== undefined && rawApprox !== null
+                ? Math.max(0, Math.round(Number(rawApprox) || 0))
+                : null;
             await client.query(
               `INSERT INTO sale_items (
-                sale_id, product_id, product_name, quantity, unit_price,
+                sale_id, product_id, product_name, quantity, approximate_qty, unit_price,
                 discount_pct, discount_percent, line_total
-              ) VALUES ($1, $2, $3, $4, $5, $6, $6, $7)`,
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8)`,
               [
                 newSaleId,
                 resolvedProdId,
                 item.productName,
                 item.quantity,
+                approxQty,
                 item.unitPrice,
                 disc,
                 item.lineTotal,
@@ -119,9 +125,10 @@ router.post('/sync/push', async (req, res, next) => {
               await client.query(
                 `UPDATE branch_inventories
                  SET stock_quantity = GREATEST(0, stock_quantity - $1),
+                     approximate_quantity = GREATEST(0, approximate_quantity - COALESCE($4, 0)),
                      updated_at = NOW()
                  WHERE branch_id = $2 AND product_id = $3`,
-                [item.quantity, targetBranchId, resolvedProdId]
+                [item.quantity, targetBranchId, resolvedProdId, approxQty]
               );
             }
           }

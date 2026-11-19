@@ -181,7 +181,9 @@ class ReceiptPrinterService {
         displayName = '$displayName $originTag';
       }
 
-      final qtyStr = '${item.quantity}';
+      final qtyStr = item.isKgItem
+          ? '${MockProduct.formatQty(item.effectiveQuantity)}kg'
+          : '${item.quantity}';
       final priceStr = currencyFmt.format(item.unitPrice);
       final totalStr = currencyFmt.format(item.lineTotal);
 
@@ -213,6 +215,13 @@ class ReceiptPrinterService {
               width: 2,
               styles: const PosStyles(align: PosAlign.right)),
         ]);
+      }
+
+      if (item.isKgItem && (item.approximateQty ?? 0) > 0) {
+        bytes += generator.text(
+          '  ~Approx ${item.approximateQty} pcs',
+          styles: const PosStyles(align: PosAlign.left),
+        );
       }
 
       // If item discount was applied, show separate discount sub-row

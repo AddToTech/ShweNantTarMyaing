@@ -78,6 +78,9 @@ class TransactionNotifier extends Notifier<TransactionState> {
         productId: cartItem.product.id,
         productName: cartItem.product.name,
         quantity: cartItem.quantity,
+        exactQuantity: cartItem.exactQuantity,
+        approximateQty: cartItem.approximateQty,
+        unitOfMeasure: cartItem.unitOfMeasure ?? (cartItem.product.isKgProduct ? 'kg' : null),
         unitPrice: cartItem.unitPrice,
         unitCost: cartItem.product.costPrice,
         discountPercent: cartItem.discountPct,
@@ -104,9 +107,14 @@ class TransactionNotifier extends Notifier<TransactionState> {
         notes: notes,
       );
 
-      // Deduct sold items from branch inventory
+      // Deduct sold items (including fractional Kg and approximate qty) from branch inventory
       for (final item in cart.items) {
-        ref.read(inventoryProvider.notifier).deductStock(branchId, item.product.id, item.quantity);
+        ref.read(inventoryProvider.notifier).deductStockExact(
+              branchId,
+              item.product.id,
+              item.effectiveQuantity,
+              approximateQuantity: item.approximateQty,
+            );
       }
 
       state = state.copyWith(

@@ -55,12 +55,21 @@ class SaleRepository {
       final rawUnitPrice = itemMap['unit_price'] ?? itemMap['unitPrice'];
       final rawDiscount = itemMap['discount_percent'] ?? itemMap['discountPercent'] ?? itemMap['discount_pct'];
       final rawLineTotal = itemMap['line_total'] ?? itemMap['lineTotal'];
+      final rawQty = (itemMap['quantity'] is num)
+          ? (itemMap['quantity'] as num).toDouble()
+          : double.tryParse(itemMap['quantity']?.toString() ?? '') ?? 1.0;
+      final rawApprox = itemMap['approximate_qty'] ?? itemMap['approximateQty'];
+      final approxQty = (rawApprox is num)
+          ? rawApprox.toInt()
+          : int.tryParse(rawApprox?.toString() ?? '');
+      final rawUom = (itemMap['unit_of_measure'] ?? itemMap['unitOfMeasure'])?.toString().trim();
       return SaleTransactionItem(
         productId: rawProdId?.toString() ?? '',
         productName: rawProdName?.toString() ?? '',
-        quantity: (itemMap['quantity'] is num)
-            ? (itemMap['quantity'] as num).toInt()
-            : double.tryParse(itemMap['quantity']?.toString() ?? '')?.toInt() ?? 1,
+        quantity: rawQty > 0 && rawQty.round() < 1 ? 1 : rawQty.round(),
+        exactQuantity: rawQty,
+        approximateQty: approxQty,
+        unitOfMeasure: (rawUom != null && rawUom.isNotEmpty) ? rawUom : null,
         unitPrice: (rawUnitPrice is num)
             ? rawUnitPrice.toDouble()
             : double.tryParse(rawUnitPrice?.toString() ?? '') ?? 0.0,
@@ -145,7 +154,9 @@ class SaleRepository {
       'items': items.map((i) => {
         'productId': i.productId,
         'productName': i.productName,
-        'quantity': i.quantity,
+        'quantity': i.effectiveQuantity,
+        if (i.approximateQty != null) 'approximateQty': i.approximateQty,
+        if (i.unitOfMeasure != null) 'unitOfMeasure': i.unitOfMeasure,
         'unitPrice': i.unitPrice,
         'discountPercent': i.discountPercent,
         'lineTotal': i.lineTotal,

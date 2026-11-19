@@ -243,17 +243,18 @@ CREATE INDEX idx_sales_receipt_no ON sales(receipt_no);
 SELECT create_updated_at_trigger('sales');
 
 CREATE TABLE sale_items (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sale_id      UUID NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
-  product_id   UUID NOT NULL REFERENCES products(id),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sale_id         UUID NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+  product_id      UUID NOT NULL REFERENCES products(id),
 
-  product_name VARCHAR(200) NOT NULL,   -- Snapshot at time of sale
-  unit_price   NUMERIC(14,2) NOT NULL,
-  quantity     NUMERIC(10,2) NOT NULL,
-  discount_pct NUMERIC(5,2)  NOT NULL DEFAULT 0,
-  line_total   NUMERIC(14,2) NOT NULL,
+  product_name    VARCHAR(200) NOT NULL,   -- Snapshot at time of sale
+  unit_price      NUMERIC(14,2) NOT NULL,
+  quantity        NUMERIC(10,2) NOT NULL,
+  approximate_qty INT,
+  discount_pct    NUMERIC(5,2)  NOT NULL DEFAULT 0,
+  line_total      NUMERIC(14,2) NOT NULL,
 
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_sale_items_sale    ON sale_items(sale_id);
 CREATE INDEX idx_sale_items_product ON sale_items(product_id);

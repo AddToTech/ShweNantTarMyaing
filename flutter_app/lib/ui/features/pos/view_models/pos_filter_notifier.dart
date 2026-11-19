@@ -103,23 +103,31 @@ final filteredProductsProvider = Provider<List<MockProduct>>((ref) {
     return p.copyWith(stock: inv.getStock(filter.selectedBranchId, p.id));
   }).toList();
 
+  final origins = ref.watch(activePlantOriginsProvider);
+  final originNamesList = origins.map((o) => o.name).toList();
+
+  CategoryItem? matchedCatItem;
+
   // ── Category filter ───────────────────────────────────────
   if (filter.selectedCategoryId != 'all') {
-    final catItem = categories
-        .where((c) =>
-            c.id == filter.selectedCategoryId ||
-            (c.standardCategory != null &&
-                c.standardCategory!.name == filter.selectedCategoryId))
-        .firstOrNull;
+    matchedCatItem = categories
+            .where((c) => c.id == filter.selectedCategoryId)
+            .firstOrNull ??
+        categories
+            .where((c) =>
+                c.standardCategory != null &&
+                c.standardCategory!.name == filter.selectedCategoryId)
+            .firstOrNull;
     products = products
         .where((p) => p.matchesCategory(
               selectedCategoryId: filter.selectedCategoryId,
-              standardCategory: catItem?.standardCategory ??
-                  (filter.selectedCategory != ProductCategory.all
+              standardCategory: matchedCatItem != null
+                  ? matchedCatItem.standardCategory
+                  : (filter.selectedCategory != ProductCategory.all
                       ? filter.selectedCategory
                       : null),
-              catName: catItem?.name,
-              catEnglishName: catItem?.englishName,
+              catName: matchedCatItem?.name,
+              catEnglishName: matchedCatItem?.englishName,
             ))
         .toList();
   } else if (filter.selectedCategory != ProductCategory.all) {
@@ -128,53 +136,26 @@ final filteredProductsProvider = Provider<List<MockProduct>>((ref) {
         .toList();
   }
 
-  // ── Sub-filter ────────────────────────────────────────────
+  // ── Sub-filter (Subcategory & Plant Origin) ───────────────
   if (filter.selectedSubFilter != 'All' && filter.selectedSubFilter != 'အားလုံး') {
-    if (filter.selectedCategory == ProductCategory.plants) {
-      final sub = filter.selectedSubFilter.trim();
-      final subLower = sub.toLowerCase();
-
-      final originMatches = products.where((p) {
-        if (p.originName != null && p.originName!.trim().toLowerCase() == subLower) {
-          return true;
-        }
-        if (p.displayOrigin != null && p.displayOrigin!.trim().toLowerCase() == subLower) {
-          return true;
-        }
-        if ((subLower.contains('thai') || subLower.contains('ယိုးဒယား')) && p.originType == OriginType.thaiImport) {
-          return true;
-        }
-        if ((subLower.contains('china') || subLower.contains('တရုတ်')) && p.originType == OriginType.chinaImport) {
-          return true;
-        }
-        if ((subLower.contains('local') || subLower.contains('ပြည်တွင်း')) && p.originType == OriginType.local) {
-          return true;
-        }
-        return false;
-      }).toList();
-
-      if (originMatches.isNotEmpty) {
-        products = originMatches;
-      } else {
-        // Filter by plant subcategory
-        products = products
-            .where((p) => p.subcategory == filter.selectedSubFilter)
-            .toList();
-      }
-    } else {
-      // Other categories: filter by subcategory name
-      products = products
-          .where((p) => p.subcategory == filter.selectedSubFilter)
-          .toList();
-    }
+    final isPlantsCategory =
+        matchedCatItem?.standardCategory == ProductCategory.plants ||
+            (matchedCatItem == null &&
+                filter.selectedCategory == ProductCategory.plants);
+    products = products
+        .where((p) => p.matchesSubFilter(
+              filter.selectedSubFilter,
+              isPlantsCategory: isPlantsCategory,
+              originNames: originNamesList,
+            ))
+        .toList();
   }
 
   // ── Search query (Item name, Category, Vendor, Plant Origin, Barcode) ──
   if (filter.searchQuery.isNotEmpty) {
-    final catNames = {for (final c in categories) c.id: c.name};
+    final catNames = {for (final c in categories) c.id: '${c.name} ${c.englishName}'};
     final vendors = ref.watch(vendorProvider);
     final vendorNames = {for (final v in vendors) v.id: v.name};
-    final origins = ref.watch(activePlantOriginsProvider);
     final originNames = {for (final o in origins) o.id: o.name};
 
     products = products

@@ -189,9 +189,19 @@ class InventoryNotifier extends Notifier<InventoryState> {
 
   /// Deduct stock for a product at a branch (e.g. sale, wastage, outgoing transfer)
   bool deductStock(String branchId, String productId, int quantity) {
+    return deductStockExact(branchId, productId, quantity.toDouble());
+  }
+
+  /// Deduct fractional (Kg) stock and optional approximate quantity at a branch
+  bool deductStockExact(
+    String branchId,
+    String productId,
+    double quantity, {
+    int? approximateQuantity,
+  }) {
     final key = '$branchId:$productId';
     final currentExact = state.getExactStock(branchId, productId);
-    if (quantity > currentExact) {
+    if (quantity > currentExact + 0.0001) {
       return false; // Insufficient stock
     }
     final nextExactVal = (currentExact - quantity).clamp(0.0, 999999.0);
@@ -199,7 +209,19 @@ class InventoryNotifier extends Notifier<InventoryState> {
     final nextExact = Map<String, double>.from(state.exactStocks);
     nextExact[key] = nextExactVal;
     next[key] = nextExactVal.round();
-    state = state.copyWith(stocks: next, exactStocks: nextExact);
+
+    Map<String, int>? nextApprox;
+    if (approximateQuantity != null && approximateQuantity > 0) {
+      nextApprox = Map<String, int>.from(state.approxStocks);
+      final currentApprox = nextApprox[key] ?? 0;
+      nextApprox[key] = (currentApprox - approximateQuantity).clamp(0, 999999);
+    }
+
+    state = state.copyWith(
+      stocks: next,
+      exactStocks: nextExact,
+      approxStocks: nextApprox,
+    );
     return true;
   }
 

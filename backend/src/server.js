@@ -156,11 +156,12 @@ if (process.env.NODE_ENV !== 'test') {
       )
       .catch((err) => console.error('Migration notice (products_vendor_id):', err.message));
 
-    // Support approximate_quantity on branch_inventories and approximate_qty on purchase_items for Kg Sell products
+    // Support approximate_quantity on branch_inventories and approximate_qty on purchase_items / sale_items for Kg Sell products
     await pool
       .query(
         `ALTER TABLE branch_inventories ADD COLUMN IF NOT EXISTS approximate_quantity INT NOT NULL DEFAULT 0;
          ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS approximate_qty INT;
+         ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS approximate_qty INT;
          CREATE OR REPLACE FUNCTION apply_purchase_to_inventory(p_purchase_id UUID)
          RETURNS VOID AS $$
          DECLARE

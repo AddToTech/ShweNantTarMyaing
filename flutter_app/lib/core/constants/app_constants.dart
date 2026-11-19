@@ -10,7 +10,7 @@ class AppConstants {
 
   // ── App Info ────────────────────────────────────────────
   static const String appName    = 'ရွှေနံ့သာမြိုင်';
-  static const String appVersion = '1.5.7';
+  static const String appVersion = '1.5.8';
 
   // ── API ─────────────────────────────────────────────────
   /// True if [path] points to an HTTP(S) URL or a backend `/uploads/...` asset.

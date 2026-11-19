@@ -12,6 +12,7 @@ import '../../purchases/view_models/vendor_notifier.dart';
 import '../../settings/view_models/category_notifier.dart';
 import '../../settings/view_models/permission_group_notifier.dart';
 import '../../settings/view_models/plant_origin_notifier.dart';
+import '../../pos/widgets/category_filter_bar.dart';
 import '../view_models/inventory_notifier.dart';
 import 'add_product_dialog.dart';
 
@@ -28,6 +29,7 @@ class InventoryScreen extends ConsumerStatefulWidget {
 class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   String _selectedBranch = 'branch_a';
   String _selectedCategoryId = 'all';
+  String _selectedSubFilter = 'All';
   bool _onlyLowStock = false;
   final TextEditingController _searchCtrl = TextEditingController();
 
@@ -275,17 +277,20 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     final currencyFmt = NumberFormat('#,###');
     final allProducts = ref.watch(branchInventoryProvider(_selectedBranch));
 
-    final catNames = {for (final c in activeCategories) c.id: c.name};
+    final catNames = {for (final c in activeCategories) c.id: '${c.name} ${c.englishName}'};
     final vendorNames = {for (final v in vendors) v.id: v.name};
     final originNames = {for (final o in origins) o.id: o.name};
+    final originNamesList = origins.map((o) => o.name).toList();
 
     final selectedCatItem = _selectedCategoryId == 'all'
         ? null
         : activeCategories
             .where((c) => c.id == _selectedCategoryId)
             .firstOrNull;
+    final isPlantsCategory =
+        selectedCatItem?.standardCategory == ProductCategory.plants;
 
-    // Filter products
+    // Filter products (Category, Subcategory/Origin, Search, Low Stock)
     final filtered = allProducts.where((item) {
       if (_onlyLowStock && !item.isLowStock) {
         return false;
@@ -298,6 +303,14 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
           catEnglishName: selectedCatItem?.englishName,
         );
         if (!matched) return false;
+      }
+      if (_selectedSubFilter != 'All' && _selectedSubFilter != 'အားလုံး') {
+        final matchedSub = item.product.matchesSubFilter(
+          _selectedSubFilter,
+          isPlantsCategory: isPlantsCategory,
+          originNames: originNamesList,
+        );
+        if (!matchedSub) return false;
       }
       if (_searchCtrl.text.isNotEmpty) {
         final match = item.product.matchesSearch(
@@ -414,7 +427,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
             ),
           ),
 
-          // ── Filter & Search Toolbar ───────────────────────────
+          // ── Filter & Search Toolbar (matches POS filter & search UX) ─
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
             color: AppColors.surfaceVariant,
@@ -422,7 +435,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               children: [
                 // Search field
                 Expanded(
-                  flex: 3,
                   child: SizedBox(
                     height: 38,
                     child: TextField(
@@ -457,67 +469,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 ),
                 const SizedBox(width: 12),
 
-                // Category Tabs
-                Expanded(
-                  flex: 5,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(
-                              'အားလုံး',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: _selectedCategoryId == 'all'
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                                color: _selectedCategoryId == 'all'
-                                    ? AppColors.textOnPrimary
-                                    : AppColors.textSecondary,
-                              ),
-                            ),
-                            selected: _selectedCategoryId == 'all',
-                            selectedColor: AppColors.primary,
-                            backgroundColor: AppColors.surface,
-                            onSelected: (_) =>
-                                setState(() => _selectedCategoryId = 'all'),
-                          ),
-                        ),
-                        ...activeCategories.map((c) {
-                          final selected = _selectedCategoryId == c.id;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: ChoiceChip(
-                              label: Text(
-                                '${c.emoji} ${c.name}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: selected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: selected
-                                      ? AppColors.textOnPrimary
-                                      : AppColors.textSecondary,
-                                ),
-                              ),
-                              selected: selected,
-                              selectedColor: AppColors.primary,
-                              backgroundColor: AppColors.surface,
-                              onSelected: (_) =>
-                                  setState(() => _selectedCategoryId = c.id),
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
                 // Low Stock Toggle
                 FilterChip(
                   label: Row(
@@ -546,6 +497,19 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                 ),
               ],
             ),
+          ),
+
+          // Category Tabs + Dynamic Subcategory / Origin Chips
+          CategoryFilterBar(
+            selectedCategoryIdOverride: _selectedCategoryId,
+            selectedCategoryOverride:
+                selectedCatItem?.standardCategory ?? ProductCategory.all,
+            selectedSubFilterOverride: _selectedSubFilter,
+            onSelectCategoryItem: (catItem) => setState(() {
+              _selectedCategoryId = catItem?.id ?? 'all';
+              _selectedSubFilter = 'All';
+            }),
+            onSelectSubFilter: (sub) => setState(() => _selectedSubFilter = sub),
           ),
 
           // ── Stat Summary Strip ────────────────────────────────

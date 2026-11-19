@@ -4,7 +4,10 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../data/mock/mock_products.dart';
 import '../../../shared/widgets/product_avatar.dart';
+import '../../inventory/view_models/inventory_notifier.dart';
 import '../view_models/cart_notifier.dart';
+import '../view_models/pos_filter_notifier.dart';
+import 'kg_sale_input_dialog.dart';
 
 // ============================================================
 // ProductGridItem
@@ -41,8 +44,23 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
 
   Future<void> _onTap() async {
     await _scaleCtrl.reverse();
-    ref.read(cartProvider.notifier).addItem(widget.product);
     await _scaleCtrl.forward();
+    if (!mounted) return;
+
+    if (widget.product.isKgProduct) {
+      final existing = ref
+          .read(cartProvider)
+          .items
+          .where((i) => i.product.id == widget.product.id)
+          .firstOrNull;
+      await KgSaleInputDialog.show(
+        context,
+        product: widget.product,
+        existingItem: existing,
+      );
+    } else {
+      ref.read(cartProvider.notifier).addItem(widget.product);
+    }
   }
 
   Color get _bgColor => switch (widget.product.category) {
@@ -88,12 +106,22 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
   @override
   Widget build(BuildContext context) {
     final cartItems = ref.watch(cartProvider).items;
-    final qtyInCart = cartItems
+    final cartItem = cartItems
         .where((i) => i.product.id == widget.product.id)
-        .fold(0, (s, i) => s + i.quantity);
+        .firstOrNull;
+    final branchId = ref.watch(posFilterProvider).selectedBranchId;
+    final inv = ref.watch(inventoryProvider);
+    final isKg = widget.product.isKgProduct;
+    final exactStock = isKg
+        ? inv.getExactStock(branchId, widget.product.id)
+        : widget.product.stock.toDouble();
+    final approxStock =
+        isKg ? inv.getApproxStock(branchId, widget.product.id) : 0;
     final fmt = NumberFormat('#,###');
 
-    final isOutOfStock = widget.product.isOutOfStock;
+    final isOutOfStock = isKg ? exactStock <= 0 : widget.product.isOutOfStock;
+    final isLowStock =
+        isKg ? exactStock <= widget.product.minStock : widget.product.isLowStock;
 
     return AnimatedBuilder(
       animation: _scaleCtrl,
@@ -105,10 +133,10 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: qtyInCart > 0
+              color: cartItem != null
                   ? AppColors.primary
                   : AppColors.border,
-              width: qtyInCart > 0 ? 1.8 : 1.0,
+              width: cartItem != null ? 1.8 : 1.0,
             ),
             boxShadow: [
               BoxShadow(
@@ -169,17 +197,19 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
                     Positioned(
                       top: 5, right: 5,
                       child: _Badge(
-                        label: '${widget.product.stock}',
-                        color: widget.product.isLowStock
+                        label: isKg
+                            ? '${MockProduct.formatQty(exactStock)} Kg'
+                            : '${widget.product.stock}',
+                        color: isLowStock
                             ? AppColors.error
                             : Colors.black.withValues(alpha: 0.50),
                         textColor: Colors.white,
-                        hasBorder: !widget.product.isLowStock,
+                        hasBorder: !isLowStock,
                       ),
                     ),
 
                     // In-cart quantity bubble (bottom-right)
-                    if (qtyInCart > 0)
+                    if (cartItem != null)
                       Positioned(
                         bottom: 5, right: 5,
                         child: Container(
@@ -201,7 +231,9 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
                               const Icon(Icons.shopping_cart_rounded, size: 10, color: AppColors.textOnPrimary),
                               const SizedBox(width: 3),
                               Text(
-                                '$qtyInCart',
+                                isKg
+                                    ? '${MockProduct.formatQty(cartItem.effectiveQuantity)} Kg'
+                                    : '${cartItem.quantity}',
                                 style: const TextStyle(
                                   color: AppColors.textOnPrimary,
                                   fontSize: 10,
@@ -266,7 +298,7 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
                         textBaseline: TextBaseline.alphabetic,
                         children: [
                           Text(
-                            '${fmt.format(widget.product.salePrice)} Ks',
+                            '${fmt.format(widget.product.salePrice)} ${isKg ? 'Ks/Kg' : 'Ks'}',
                             style: TextStyle(
                               color: isOutOfStock
                                   ? AppColors.textMuted
@@ -286,6 +318,19 @@ class _ProductGridItemState extends ConsumerState<ProductGridItem>
                                   color: AppColors.textMuted,
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            )
+                          else if (isKg && approxStock > 0)
+                            Flexible(
+                              child: Text(
+                                '~$approxStock ခု',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),

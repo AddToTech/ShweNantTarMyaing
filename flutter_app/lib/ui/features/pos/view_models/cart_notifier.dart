@@ -9,19 +9,39 @@ class CartItem {
   const CartItem({
     required this.product,
     required this.quantity,
+    this.exactQuantity,
+    this.approximateQty,
+    this.unitOfMeasure,
     this.discountPct = 0.0,
   });
 
   final MockProduct product;
   final int quantity;
+  final double? exactQuantity;
+  final int? approximateQty;
+  final String? unitOfMeasure;
   final double discountPct; // 0–100
 
+  bool get isKgItem =>
+      (unitOfMeasure?.toLowerCase() == 'kg') || product.isKgProduct;
+  double get effectiveQuantity => exactQuantity ?? quantity.toDouble();
   double get unitPrice => product.salePrice;
-  double get lineTotal  => unitPrice * quantity * (1 - discountPct / 100);
+  double get lineTotal =>
+      unitPrice * effectiveQuantity * (1 - discountPct / 100);
 
-  CartItem copyWith({int? quantity, double? discountPct}) => CartItem(
-        product:     product,
-        quantity:    quantity    ?? this.quantity,
+  CartItem copyWith({
+    int? quantity,
+    double? exactQuantity,
+    int? approximateQty,
+    String? unitOfMeasure,
+    double? discountPct,
+  }) =>
+      CartItem(
+        product: product,
+        quantity: quantity ?? this.quantity,
+        exactQuantity: exactQuantity ?? this.exactQuantity,
+        approximateQty: approximateQty ?? this.approximateQty,
+        unitOfMeasure: unitOfMeasure ?? this.unitOfMeasure,
         discountPct: discountPct ?? this.discountPct,
       );
 }
@@ -131,6 +151,46 @@ class CartNotifier extends Notifier<CartState> {
     } else {
       state = state.copyWith(
         items: [...state.items, CartItem(product: product, quantity: 1)],
+      );
+    }
+  }
+
+  /// Set or update a Kg-sold item with fractional weight and approximate piece quantity.
+  void setKgItem(
+    MockProduct product, {
+    required double kg,
+    int? approximateQty,
+  }) {
+    if (kg <= 0) {
+      remove(product.id);
+      return;
+    }
+    final compatQty = kg.round() < 1 ? 1 : kg.round();
+    final idx = _indexOf(product.id);
+    if (idx >= 0) {
+      _updateItem(
+        idx,
+        (item) => CartItem(
+          product: product,
+          quantity: compatQty,
+          exactQuantity: kg,
+          approximateQty: approximateQty,
+          unitOfMeasure: 'kg',
+          discountPct: item.discountPct,
+        ),
+      );
+    } else {
+      state = state.copyWith(
+        items: [
+          ...state.items,
+          CartItem(
+            product: product,
+            quantity: compatQty,
+            exactQuantity: kg,
+            approximateQty: approximateQty,
+            unitOfMeasure: 'kg',
+          ),
+        ],
       );
     }
   }

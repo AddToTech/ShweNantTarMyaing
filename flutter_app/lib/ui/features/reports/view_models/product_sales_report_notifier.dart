@@ -134,7 +134,7 @@ final productWiseSalesDataProvider = Provider<List<ProductWiseSaleSummary>>((ref
           ? item.unitCost
           : (catalog.where((c) => c.id == item.productId).firstOrNull?.costPrice ??
               (item.unitPrice * 0.6));
-      final lineCost = itemUnitCost * item.quantity;
+      final lineCost = itemUnitCost * item.effectiveQuantity;
 
       aggMap[item.productId] = (
         quantity: current.quantity + item.quantity,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../data/mock/mock_products.dart';
 import '../view_models/cart_notifier.dart';
 
 /// Modal dialog allowing cashiers to view, resume, or discard held orders
@@ -303,7 +304,9 @@ class HeldOrdersDialog extends ConsumerWidget {
                                               .withValues(alpha: 0.6)),
                                     ),
                                     child: Text(
-                                      '${item.product.name} ×${item.quantity}',
+                                      item.isKgItem
+                                          ? '${item.product.name} (${MockProduct.formatQty(item.effectiveQuantity)} Kg${(item.approximateQty ?? 0) > 0 ? ', ~${item.approximateQty} ခု' : ''})'
+                                          : '${item.product.name} ×${item.quantity}',
                                       style: TextStyle(
                                         color: AppColors.textPrimary,
                                         fontSize: 11,

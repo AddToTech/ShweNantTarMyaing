@@ -146,7 +146,7 @@ final reportsDataProvider = Provider<ReportsDashboardData>((ref) {
     for (final item in sale.items) {
       unitsCount += item.quantity;
       final unitCost = productCostMap[item.productId] ?? (item.unitPrice * 0.6);
-      totalCost += unitCost * item.quantity;
+      totalCost += unitCost * item.effectiveQuantity;
     }
   }
 
@@ -218,7 +218,7 @@ final reportsDataProvider = Provider<ReportsDashboardData>((ref) {
         stdCat: current.stdCat,
         displayName: current.displayName,
         revenue: current.revenue + item.lineTotal,
-        cost: current.cost + (unitCost * item.quantity),
+        cost: current.cost + (unitCost * item.effectiveQuantity),
         units: current.units + item.quantity,
       );
     }

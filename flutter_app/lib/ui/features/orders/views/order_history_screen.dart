@@ -903,7 +903,7 @@ class _OrderRowCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${transaction.items.fold(0, (s, i) => s + i.quantity)} ခု: ${transaction.items.map((i) => "${i.productName} (×${i.quantity})").take(2).join(", ")}${transaction.items.length > 2 ? "..." : ""}',
+                  '${transaction.items.fold(0, (s, i) => s + i.quantity)} ခု: ${transaction.items.map((i) => i.isKgItem ? "${i.productName} (${i.displayQty}${(i.approximateQty ?? 0) > 0 ? ', ~${i.approximateQty} ခု' : ''})" : "${i.productName} (×${i.quantity})").take(2).join(", ")}${transaction.items.length > 2 ? "..." : ""}',
                   style: TextStyle(
                       color: AppColors.textSecondary, fontSize: 11),
                   maxLines: 2,
